@@ -9,3 +9,4 @@ ref/
 
 
 *.spec
+*_test.py
