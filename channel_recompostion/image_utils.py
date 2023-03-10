@@ -2,28 +2,57 @@
 
 
 """
+import imageio.v3 as iio
 import cv2
 import numpy as np
 import os
 
+from CR_enum import *
+
 
 class Image:
-    def __init__(self, img_data: np.ndarray=None):
+    def __init__(self, img_data: np.ndarray = None):
         self.img = img_data
         if self.img is not None:
             self.channel_count = self.__getChannelCount()
 
     def setImageData(self, img_data: np.ndarray):
-        self.img = img_data
+        self.img = img_data.copy()
         self.channel_count = self.__getChannelCount()
 
     def readImage(self, path):
-        self.img = cv_imread(path)
+        self.img = imread(path)
         self.channel_count = self.__getChannelCount()
         return self
 
-    def writeImage(self, path):
-        cv_imwrite(path, self.img)
+    def writeImage(self, path, ch=Channel.all, black_or_white=1):
+        """
+        save image,
+        :param path: path
+        :param ch: channel enumeration
+        :param black_or_white: 0 is black, 1 is white
+        """
+        imwrite(path, self.rgbaWithSelection(ch, black_or_white))
+
+    def rgbaWithSelection(self, ch=Channel.all, black_or_white=1):
+        """
+        always return rgba 4 channels
+        :param ch: channel enumeration
+        :param black_or_white: 0 is black, 1 is white
+        :return: image np.ndarray
+        """
+        img = self.img.copy()
+        for n in range(3):
+            bit = ch >> n
+            print(bin(bit))
+            if bit & 0b0001 != 0b0001:
+                print("bb")
+                img[:, :, n] = self.zeroData()
+
+        if ch & 0b1000 != 0b1000:
+            img[:, :, 3] = self.whiteData() if black_or_white else self.zeroData()
+
+        return img
 
     def data(self):
         """
@@ -55,7 +84,7 @@ class Image:
 
     def r(self):
         if self.channel_count >= 3:
-            return self.img[:, :, 2]
+            return self.img[:, :, 0]
         else:
             return self.img
 
@@ -67,7 +96,7 @@ class Image:
 
     def b(self):
         if self.channel_count >= 3:
-            return self.img[:, :, 0]
+            return self.img[:, :, 2]
         else:
             return self.zeroData()
 
@@ -76,6 +105,16 @@ class Image:
             return self.img[:, :, 3]
         else:
             return self.zeroData()
+
+    def getSingleChannel(self, ch: Channel.hint):
+        if ch == Channel.r:
+            return self.r()
+        elif ch == Channel.g:
+            return self.g()
+        elif ch == Channel.b:
+            return self.b()
+        elif ch == Channel.a:
+            return self.a()
 
     def __getChannelCount(self):
         try:
@@ -106,14 +145,16 @@ class Image:
         self.img = cv2.resize(self.img, (x, y), interpolation=interpolation)
 
     def rgbData(self):
-        if self.channel_count > 1:
-            return cv2.cvtColor(self.img, cv2.COLOR_BGR2RGB)
-        else:
+        if self.channel_count == 1:
             return cv2.cvtColor(self.img, cv2.COLOR_GRAY2RGB)
+        elif self.channel_count == 3:
+            return self.img
+        else:
+            return cv2.cvtColor(self.img, cv2.COLOR_RGBA2RGB)
 
     def rgbaData(self):
         if self.channel_count > 3:
-            return cv2.cvtColor(self.img, cv2.COLOR_BGRA2RGBA)
+            return self.img
         elif self.channel_count > 1:
             return cv2.cvtColor(self.img, cv2.COLOR_BGR2RGBA)
         else:
@@ -143,10 +184,22 @@ def cv_imread(file_path):
     return cv_img
 
 
+def imread(file_path):
+    """
+    :param file_path: image path
+    :return: opencv image, also numpy array, will be a BGR(A) ordered array
+    """
+    img = iio.imread(file_path)
+    return img
+
+
 def cv_imwrite(file_path: str, img: np.ndarray):
     [filename, extension] = os.path.splitext(file_path)
     cv2.imencode(extension, img)[1].tofile(file_path)
 
+
+def imwrite(file_path: str, img: np.ndarray):
+    iio.imwrite(file_path, img)
 
 def cv_imshow(img: np.ndarray, win_name="ww", wait_key=0):
     cv2.imshow(win_name, img)
