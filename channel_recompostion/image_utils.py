@@ -13,6 +13,7 @@ from CR_enum import *
 class Image:
     def __init__(self, img_data: np.ndarray = None):
         self.img = img_data
+        self.channel_count = 0
         if self.img is not None:
             self.channel_count = self.__getChannelCount()
 
@@ -21,7 +22,8 @@ class Image:
         self.channel_count = self.__getChannelCount()
 
     def readImage(self, path):
-        self.img = imread(path)
+        self.img = convertToF32(imread(path))
+        # print(self.img, self.img.dtype)
         self.channel_count = self.__getChannelCount()
         return self
 
@@ -44,9 +46,9 @@ class Image:
         img = self.img.copy()
         for n in range(3):
             bit = ch >> n
-            print(bin(bit))
+            # print(bin(bit))
             if bit & 0b0001 != 0b0001:
-                print("bb")
+                # print("bb")
                 img[:, :, n] = self.zeroData()
 
         if ch & 0b1000 != 0b1000:
@@ -118,9 +120,10 @@ class Image:
 
     def __getChannelCount(self):
         try:
+            # print(self.shape())
             count = self.shape()[2]
-        except Exception as e:
-            print(e)
+        except IndexError:
+            # print("It's grayscale image")
             count = 1
 
         return count
@@ -144,6 +147,25 @@ class Image:
         x = int(y * ratio)
         self.img = cv2.resize(self.img, (x, y), interpolation=interpolation)
 
+    def resized(self, dsize, fx=None, fy=None, interpolation=None):
+        """
+        :param dsize: should be (y, x), or be None/(0, 0) and use fx fy to implement
+        :param fx: x ratio
+        :param fy: y ratio
+        :param interpolation: opencv interpolation enumeration
+        """
+        return Image(cv2.resize(self.img, dsize, fx=fx, fy=fy, interpolation=interpolation))
+
+    def resizedKeepRatioX(self, x, interpolation=None):
+        ratio = self.resolution()[0]/self.resolution()[1]
+        y = int(x * ratio)
+        return Image(cv2.resize(self.img, (x, y), interpolation=interpolation))
+
+    def resizedKeepRatioY(self, y,  interpolation=None):
+        ratio = self.resolution()[1] / self.resolution()[0]
+        x = int(y * ratio)
+        return Image(cv2.resize(self.img, (x, y), interpolation=interpolation))
+
     def rgbData(self):
         if self.channel_count == 1:
             return cv2.cvtColor(self.img, cv2.COLOR_GRAY2RGB)
@@ -153,26 +175,29 @@ class Image:
             return cv2.cvtColor(self.img, cv2.COLOR_RGBA2RGB)
 
     def rgbaData(self):
-        if self.channel_count > 3:
+        # print(self.channel_count)
+        if self.channel_count == 4:
             return self.img
-        elif self.channel_count > 1:
-            return cv2.cvtColor(self.img, cv2.COLOR_BGR2RGBA)
+        elif self.channel_count == 3:
+            return cv2.cvtColor(self.img, cv2.COLOR_RGB2RGBA)
         else:
             return cv2.cvtColor(self.img, cv2.COLOR_GRAY2RGBA)
 
     def bgrData(self):
-        if self.channel_count > 1:
-            return self.img
-        else:
+        if self.channel_count == 1:
             return cv2.cvtColor(self.img, cv2.COLOR_GRAY2BGR)
+        elif self.channel_count == 3:
+            return cv2.cvtColor(self.img, cv2.COLOR_RGB2BGR)
+        else:
+            return cv2.cvtColor(self.img, cv2.COLOR_RGBA2BGR)
 
     def bgraData(self):
-        if self.channel_count > 3:
-            return self.img
-        elif self.channel_count > 1:
-            return cv2.cvtColor(self.img, cv2.COLOR_BGR2BGRA)
-        else:
+        if self.channel_count == 1:
             return cv2.cvtColor(self.img, cv2.COLOR_GRAY2BGRA)
+        elif self.channel_count == 3:
+            return cv2.cvtColor(self.img, cv2.COLOR_RGB2BGRA)
+        else:
+            return cv2.cvtColor(self.img, cv2.COLOR_RGBA2BGRA)
 
 
 def cv_imread(file_path):
@@ -201,9 +226,52 @@ def cv_imwrite(file_path: str, img: np.ndarray):
 def imwrite(file_path: str, img: np.ndarray):
     iio.imwrite(file_path, img)
 
+
 def cv_imshow(img: np.ndarray, win_name="ww", wait_key=0):
     cv2.imshow(win_name, img)
     cv2.waitKey(wait_key)
+
+
+def rgbaImage(x, y, black_or_white=0, *args, **kwargs):
+    if black_or_white == 0:
+        return np.zeros((x, y, 4), *args, **kwargs)
+    elif black_or_white ==1:
+        return np.full((x, y, 4), 255, *args, **kwargs)
+
+
+def singleChannelImage(x, y, black_or_white=0, *args, **kwargs):
+    if black_or_white == 0:
+        return np.zeros((x, y), *args, **kwargs)
+    elif black_or_white == 1:
+        return np.full((x, y), 255, *args, **kwargs)
+
+
+def convertToF32(img: np.ndarray) -> np.ndarray:
+    # print(img, img.dtype)
+    if img.dtype == "uint8" or img.dtype == "int8":
+        return np.float32(img/255)
+    elif img.dtype == "uint16" or img.dtype == "int16" or img.dtype == "uint32" or img.dtype == "int32":
+        return np.float32(img/65535)
+    else:
+        return np.float32(img)
+
+
+def convertToU16(img: np.ndarray) -> np.ndarray:
+    if img.dtype == "uint8" or img.dtype == "int8":
+        return np.uint16(img*255)
+    elif img.dtype == "float32" or img.dtype == "float64":
+        return np.uint16(img*65535)
+    else:
+        return np.uint16(img)
+
+
+def convertToU8(img: np.ndarray) -> np.ndarray:
+    if img.dtype == "uint16" or img.dtype == "int16" or img.dtype == "uint32" or img.dtype == "int32":
+        return np.uint8(img / 255)
+    elif img.dtype == "float32" or img.dtype == "float64":
+        return np.uint8(img * 255)
+    else:
+        return np.uint8(img)
 
 
 def notNone(obj) -> bool:
