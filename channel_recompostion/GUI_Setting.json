@@ -1,0 +1,22 @@
+{
+    "window": {
+        "use_this": false,
+        "x": 0,
+        "y": 0,
+        "width": 1000,
+        "height": 800
+    },
+    "detail": {
+        "picture_size": 300,
+        "half_picture_size": 145,
+        "font_size": 15,
+        "half_font_size": 8
+    },
+    "image": {
+        "res_x": 1,
+        "res_y": 0,
+        "format": "tif",
+        "interpolation": "cubic",
+        "bit": "32"
+    }
+}

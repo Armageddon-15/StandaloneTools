@@ -12,7 +12,9 @@ from CR_enum import *
 
 class Image:
     def __init__(self, img_data: np.ndarray = None):
-        self.img = img_data
+        self.img = None
+        if img_data is not None:
+            self.img = convertToF32(img_data)
         self.channel_count = 0
         if self.img is not None:
             self.channel_count = self.__getChannelCount()
@@ -128,40 +130,40 @@ class Image:
 
         return count
 
-    def resize(self, dsize, fx=None, fy=None, interpolation=None):
+    def resize(self, dsize, fx=None, fy=None, interpolation=cv2.INTER_LINEAR):
         """
         :param dsize: should be (y, x), or be None/(0, 0) and use fx fy to implement
         :param fx: x ratio
         :param fy: y ratio
-        :param interpolation: opencv interpolation enumeration
+        :param interpolation: opencv interpolation enumeration, default is cv2.INTER_LINEAR
         """
         self.img = cv2.resize(self.img, dsize, fx=fx, fy=fy, interpolation=interpolation)
 
-    def resizeKeepRatioX(self, x, interpolation=None):
+    def resizeKeepRatioX(self, x, interpolation=cv2.INTER_LINEAR):
         ratio = self.resolution()[0]/self.resolution()[1]
         y = int(x * ratio)
         self.img = cv2.resize(self.img, (x, y), interpolation=interpolation)
 
-    def resizeKeepRatioY(self, y,  interpolation=None):
+    def resizeKeepRatioY(self, y,  interpolation=cv2.INTER_LINEAR):
         ratio = self.resolution()[1] / self.resolution()[0]
         x = int(y * ratio)
         self.img = cv2.resize(self.img, (x, y), interpolation=interpolation)
 
-    def resized(self, dsize, fx=None, fy=None, interpolation=None):
+    def resized(self, dsize, fx=None, fy=None, interpolation=cv2.INTER_LINEAR):
         """
         :param dsize: should be (y, x), or be None/(0, 0) and use fx fy to implement
         :param fx: x ratio
         :param fy: y ratio
-        :param interpolation: opencv interpolation enumeration
+        :param interpolation: opencv interpolation enumeration, default is cv2.INTER_LINEAR
         """
         return Image(cv2.resize(self.img, dsize, fx=fx, fy=fy, interpolation=interpolation))
 
-    def resizedKeepRatioX(self, x, interpolation=None):
+    def resizedKeepRatioX(self, x, interpolation=cv2.INTER_LINEAR):
         ratio = self.resolution()[0]/self.resolution()[1]
         y = int(x * ratio)
         return Image(cv2.resize(self.img, (x, y), interpolation=interpolation))
 
-    def resizedKeepRatioY(self, y,  interpolation=None):
+    def resizedKeepRatioY(self, y,  interpolation=cv2.INTER_LINEAR):
         ratio = self.resolution()[1] / self.resolution()[0]
         x = int(y * ratio)
         return Image(cv2.resize(self.img, (x, y), interpolation=interpolation))
@@ -234,16 +236,26 @@ def cv_imshow(img: np.ndarray, win_name="ww", wait_key=0):
 
 def rgbaImage(x, y, black_or_white=0, *args, **kwargs):
     if black_or_white == 0:
-        return np.zeros((x, y, 4), *args, **kwargs)
+        return np.zeros((y, x, 4), *args, **kwargs)
     elif black_or_white ==1:
-        return np.full((x, y, 4), 255, *args, **kwargs)
+        return np.full((y, x, 4), 255, *args, **kwargs)
 
 
-def singleChannelImage(x, y, black_or_white=0, *args, **kwargs):
+def singleChannelImage(x, y, black_or_white=0, dtype:Bit.hint=Bit.hint, *args, **kwargs):
     if black_or_white == 0:
-        return np.zeros((x, y), *args, **kwargs)
+        return np.zeros((y, x), *args, **kwargs)
     elif black_or_white == 1:
-        return np.full((x, y), 255, *args, **kwargs)
+        return np.full((y, x), getTypeMaximum(dtype), *args, **kwargs)
+
+
+def getTypeMaximum(dtype):
+    if dtype == Bit.hint or dtype == Bit.U8:
+        return 255
+    elif dtype == Bit.U16:
+        return 65535
+    elif dtype == Bit.F32:
+        return 1.0
+
 
 
 def convertToF32(img: np.ndarray) -> np.ndarray:

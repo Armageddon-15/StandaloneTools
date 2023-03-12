@@ -1,20 +1,20 @@
-from PyQt6.QtWidgets import QLabel, QPushButton, QMenu, QWidget, QGridLayout, QVBoxLayout, QFrame, QHBoxLayout
-from PyQt6.QtWidgets import QSizePolicy, QSpinBox, QAbstractSpinBox, QApplication, QLineEdit
-from PyQt6.QtGui import QFont, QIcon, QImage, QPixmap, QDrag
+from PyQt6.QtWidgets import QLabel, QPushButton, QMenu, QWidget, QGridLayout, QVBoxLayout, QFrame, QHBoxLayout, QFileDialog
+from PyQt6.QtWidgets import QSizePolicy, QSpinBox, QAbstractSpinBox, QApplication, QLineEdit, QComboBox, QScrollArea
+from PyQt6.QtGui import QFont, QIcon, QImage, QPixmap, QDrag, QPalette, QColor
 from PyQt6.QtCore import Qt, QSize, QRect, QThread, QPoint, QMimeData, QByteArray
 from PyQt6 import QtCore
-
+from ScrollAreaWithStepSettings import ScrollAreaWithStepSettings
 from image_utils import *
 from CR_enum import *
 from Drag_and_Drop_Overlay import DnDWidget
 
 import sys
 import Recomp
-import Settings
+import GUI_Settings
 
 
 class ChannelViewer(QLabel):
-    def __init__(self, parent, image_viewer=None, ch=Channel.hint, size=Settings.half_picture_size, is_getter=False):
+    def __init__(self, parent=None, image_viewer=None, ch=Channel.hint, size=GUI_Settings.half_picture_size, is_getter=False):
         super(ChannelViewer, self).__init__(parent)
         self.is_getter = is_getter
         self.getter_index = 0
@@ -24,9 +24,10 @@ class ChannelViewer(QLabel):
             self.setAcceptDrops(True)
         # self.setScaledContents(True)
         self.setFixedSize(size, size)
-        font = QFont("Microsoft JhengHei", Settings.font_size-2, 0, False)
+        font = QFont("Microsoft JhengHei", GUI_Settings.font_size-2, 0, False)
         font.setBold(True)
         self.setFont(font)
+        self.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
         self.main = parent
         self.master = image_viewer
@@ -38,7 +39,7 @@ class ChannelViewer(QLabel):
         self.channel_sign.setMinimumSize(0, 0)
         self.channel_sign.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
-        font.setPointSize(Settings.half_font_size)
+        font.setPointSize(GUI_Settings.half_font_size)
 
         self.name_sign = QLabel(self)
         self.name_sign.setSizePolicy(size_po)
@@ -133,6 +134,9 @@ class ChannelViewer(QLabel):
             pass
         else:
             name = data.text()
+            iimg = Recomp.getImageByIndex(self.getter_index)
+            if iimg is not None:
+                iimg.removeLink(self)
             ch = Channel(int(data.data("ch")))
             self.getter_index = index
             self.getter_ch = ch
@@ -145,21 +149,23 @@ class ChannelViewer(QLabel):
         self.master.refreshImage()
 
     def refresh(self):
-        iimg = Recomp.getImageByIndex(self.getter_index)
-        self.setPixmap(imageToPixmap(iimg.image.getSingleChannel(self.getter_ch)).scaled(self.width(), self.height(), Qt.AspectRatioMode.KeepAspectRatio))
-        self.setLabelName(iimg.name + "-" + str(self.getter_ch.name).capitalize())
-        self.master.addRefreshFlag()
-
-    def clearSelf(self):
-        if self.is_getter:
-            # print("ss")
+        if self.getter_ch != Channel.hint:
             iimg = Recomp.getImageByIndex(self.getter_index)
-            iimg.removeLink(self)
-            self.setPixmap(QPixmap())
-            self.getter_ch = Channel.hint
-            self.getter_index = 0
-            self.setNameColor(Channel.hint)
-            self.refreshImageView()
+            self.setPixmap(imageToPixmap(iimg.image.getSingleChannel(self.getter_ch)).scaled(self.width(), self.height(), Qt.AspectRatioMode.KeepAspectRatio))
+            self.setLabelName(iimg.name + "-" + str(self.getter_ch.name).capitalize())
+            self.master.addRefreshFlag()
+
+    def clearSelf(self, remove=True):
+        if self.is_getter:
+            iimg = Recomp.getImageByIndex(self.getter_index)
+            if iimg is not None:
+                if remove:
+                    iimg.removeLink(self)
+                self.setPixmap(QPixmap())
+                self.getter_ch = Channel.hint
+                self.getter_index = 0
+                self.setNameColor(Channel.hint)
+                self.refreshImageView()
 
     def rematch(self):
         pass
@@ -168,7 +174,7 @@ class ChannelViewer(QLabel):
         self.rematch()
 
     def mousePressEvent(self, e) -> None:
-        if e.button() == Qt.MouseButton.LeftButton and not self.is_getter:
+        if e.button() == Qt.MouseButton.LeftButton and not self.is_getter and not self.pixmap().isNull():
             drag = QDrag(self)
             mime_data = QMimeData()
             mime_data.setData("ch", QByteArray(str(self.ch.value).encode("utf-8")))
@@ -199,34 +205,52 @@ class ChannelViewer(QLabel):
 
 
 class ImageViewer(QLabel):
-    def __init__(self, parent, size=Settings.picture_size, is_getter=False):
+    def __init__(self, parent, size=GUI_Settings.picture_size, is_getter=False):
         super(ImageViewer, self).__init__(parent)
         self.main = parent
         self.is_getter = is_getter
-        # self.setScaledContents(True)
         self.setFixedSize(size, size)
+        self.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
-        self.ch_viewers = [None] * 4
+        self.ch_viewers = [ChannelViewer()] * 4
+        # self.ch_viewers.clear()
         self.refresh_flag = 0
 
         self.name_label = QLineEdit(self)
-        font = QFont("Microsoft JhengHei", Settings.font_size, 0, False)
+
+        if not is_getter:
+            self.name_label.deleteLater()
+            self.name_label = QLabel(self)
+            self.name_label.setWordWrap(True)
+            self.name_label.setTextInteractionFlags(Qt.TextInteractionFlag.TextBrowserInteraction)
+            self.name_label.setStyleSheet("color: rgba(210, 210, 210, 200);background-color: rgba(0, 0, 0, 150);border-radius: 0px")
+        else:
+            self.name_label.setStyleSheet("color: rgba(40, 40, 40, 200);background-color: rgba(255, 255, 255, 150);border-radius: 0px")
+
+        font = QFont("Microsoft JhengHei", GUI_Settings.font_size, 0, False)
         font.setBold(True)
         self.name_label.setFont(font)
-        if not is_getter:
-            self.name_label.setEnabled(False)
-            self.name_label.setStyleSheet("color: rgba(210, 210, 210, 200);background-color: rgba(0, 0, 0, 150);border-radius: 0px")
         self.name_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        size_po = QSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.MinimumExpanding)
+        self.name_label.setSizePolicy(size_po)
 
+        size_po.setVerticalStretch(1)
         self.frame = QFrame(self)
+        self.frame.setSizePolicy(size_po)
+
         self.vbox = QVBoxLayout(self)
-        self.vbox.setStretch(0, 1)
+        self.vbox.setAlignment(Qt.AlignmentFlag.AlignBottom)
+        self.vbox.setContentsMargins(0, 0, 0, 0)
         self.vbox.addWidget(self.frame)
         self.vbox.addWidget(self.name_label)
 
     def setFileName(self, path):
         if path != "":
-            self.name_label.setText(os.path.split(path)[1])
+            name = os.path.split(path)[1]
+            wrapers = ["_", "-", ".", ]
+            for wrap in wrapers:
+                name = name.replace(wrap, f"{wrap}\u200b")
+            self.name_label.setText(name)
 
     def name(self):
         return self.name_label.text()
@@ -236,15 +260,25 @@ class ImageViewer(QLabel):
 
     def refreshImage(self):
         if self.is_getter:
-            res = Settings.picture_size
-            img = rgbaImage(res, res, dtype=np.uint8)
-            img[:, :, 3] = singleChannelImage(res, res, black_or_white=1, dtype=np.uint8)
+            x = y = 1
             for i in range(4):
                 index = self.ch_viewers[i].getter_index
                 ch = self.ch_viewers[i].getter_ch
                 if ch == Channel.hint:
                     continue
-                img[:, :, i] = convertToU8(Recomp.getImageByIndex(index).image.resized((res, res)).getSingleChannel(ch))
+                c_img = Recomp.getImageByIndex(index).image.getSingleChannel(ch)
+
+                x = max(x, c_img.shape[1])
+                y = max(y, c_img.shape[0])
+
+            img = rgbaImage(x, y, dtype=np.uint8)
+            img[:, :, 3] = singleChannelImage(x, y, black_or_white=1)
+            for i in range(4):
+                index = self.ch_viewers[i].getter_index
+                ch = self.ch_viewers[i].getter_ch
+                if ch == Channel.hint:
+                    continue
+                img[:, :, i] = convertToU8(Recomp.getImageByIndex(index).image.resized((x, y)).getSingleChannel(ch))
             self.setPixmap(imageToPixmap(img).scaled(self.width(), self.height(), Qt.AspectRatioMode.KeepAspectRatio))
         else:
             pass
@@ -274,126 +308,9 @@ class ImageViewer(QLabel):
     def getChannelData(self, ch: Channel.hint):
         return Recomp.getImageByIndex(self.main.index).image.getSingleChannel(ch)
 
+    def deleteSelf(self):
 
-class ImportImage(QWidget):
-    def __init__(self, parent, path="", index=0):
-        super(ImportImage, self).__init__(parent)
-        self.setAcceptDrops(True)
-        self.main = parent
-        self.index = index
-        self.filepath = path
-
-        self.image_viewer = ImageViewer(self)
-        ch_viewer_r = ChannelViewer(self, self.image_viewer, Channel.r)
-        ch_viewer_g = ChannelViewer(self, self.image_viewer, Channel.g)
-        ch_viewer_b = ChannelViewer(self, self.image_viewer, Channel.b)
-        ch_viewer_a = ChannelViewer(self, self.image_viewer, Channel.a)
-        self.chs = [ch_viewer_r, ch_viewer_g, ch_viewer_b, ch_viewer_a]
-
-        self.ch_frame = QFrame(self)
-        self.gbox = QGridLayout(self.ch_frame)
-        self.gbox.addWidget(ch_viewer_r, 0, 0)
-        self.gbox.addWidget(ch_viewer_g, 0, 1)
-        self.gbox.addWidget(ch_viewer_b, 1, 0)
-        self.gbox.addWidget(ch_viewer_a, 1, 1)
-
-        self.hbox = QHBoxLayout(self)
-        self.hbox.addWidget(self.image_viewer)
-        self.hbox.addWidget(self.ch_frame)
-
-        self.dnd_check = DnDWidget(self)
-        self.dnd_check.raise_()
-        self.dnd_check.update.connect(self.getMimeData)
-        self.dnd_check.setGeometry(QRect(0, 0, 0, 0))
-
-        self.setImage(path)
-
-    def setImage(self, path=""):
-        img = Image().readImage(path)
-        self.image_viewer.setImage(img)
-        self.image_viewer.setFileName(path)
-        if self.index in Recomp.import_images:
-            Recomp.import_images[self.index].update(img, self.image_viewer.name())
-        else:
-            Recomp.import_images.update({self.index: Recomp.IndexedImage(img, self.image_viewer.name(), self.index)})
-
-        for chv in self.chs:
-            chv.setImageFromMaster()
-
-    def getMimeData(self, data: QMimeData):
-        file_path = data.text()
-        if file_path.find(r"file:///") != -1:
-            file_path = file_path.replace(r"file:///", "")
-            file_paths = file_path.split("\n")
-            try:
-                file_paths.remove("")
-            except ValueError:
-                pass
-            self.setImage(file_paths[len(file_paths)-1])
-            self.main.refreshConnectedViewer(self.index)
-
-    def dragEnterEvent(self, e) -> None:
-        self.dnd_check.setGeometry(0, 0, self.width(), self.height())
-
-    def dragLeaveEvent(self, e) -> None:
-        self.dnd_check.setGeometry(0, 0, 0, 0)
-
-
-class ExportImage(QWidget):
-    def __init__(self, parent, index=0):
-        super(ExportImage, self).__init__(parent)
-        self.main = parent
-        self.index = index
-
-        self.image_viewer = ImageViewer(self, is_getter=True)
-        ch_viewer_r = ChannelViewer(self, self.image_viewer, Channel.r, is_getter=True)
-        ch_viewer_g = ChannelViewer(self, self.image_viewer, Channel.g, is_getter=True)
-        ch_viewer_b = ChannelViewer(self, self.image_viewer, Channel.b, is_getter=True)
-        ch_viewer_a = ChannelViewer(self, self.image_viewer, Channel.a, is_getter=True)
-        self.chs = [ch_viewer_r, ch_viewer_g, ch_viewer_b, ch_viewer_a]
-
-        self.ch_frame = QFrame(self)
-        self.gbox = QGridLayout(self.ch_frame)
-        self.gbox.addWidget(ch_viewer_r, 0, 0)
-        self.gbox.addWidget(ch_viewer_g, 0, 1)
-        self.gbox.addWidget(ch_viewer_b, 1, 0)
-        self.gbox.addWidget(ch_viewer_a, 1, 1)
-
-        self.hbox = QHBoxLayout(self)
-        self.hbox.addWidget(self.ch_frame)
-        self.hbox.addWidget(self.image_viewer)
-
-    def refresh(self):
-        self.image_viewer.checkedRefresh()
-
-
-class Window(QWidget):
-    def __init__(self):
-        super(Window, self).__init__()
-        self.importer_count = 1
-        self.exporter_count = 1
-        self.importers = [ImportImage(self, r"D:\PhonePicBackUp\head\未标题-1.png", 0)
-                          ]
-        self.exporters = [ExportImage(self)]
-
-        self.hbox = QHBoxLayout(self)
-        for im in self.importers:
-            self.hbox.addWidget(im)
-        self.hbox.addWidget(self.exporters[0])
-
-    def findImageByIndex(self, index):
-        for importer in self.importers:
-            if importer.index == index:
-                return importer.image_viewer
-
-    def refreshConnectedViewer(self, index):
-        iimg = Recomp.getImageByIndex(index)
-        for link in iimg.linkers:
-            if link is not None:
-                link.refresh()
-
-        for exp in self.exporters:
-            exp.refresh()
+        self.deleteLater()
 
 
 def imageToPixmap(img: np.ndarray) -> QPixmap:
@@ -429,8 +346,4 @@ def pixmapWithAlpha(pixmap: QPixmap):
     return new_pix
 
 
-if __name__ == '__main__':
-    app = QApplication([])
-    window = Window()
-    window.show()
-    sys.exit(app.exec())
+
