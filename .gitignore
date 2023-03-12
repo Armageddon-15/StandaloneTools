@@ -10,3 +10,7 @@ ref/
 
 *.spec
 *_test.py
+*.png
+*.tif
+*.jpg
+*.tga
