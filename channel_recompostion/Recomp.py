@@ -56,6 +56,8 @@ class Recompositer:
                 self.ch_imgs[n] = cv2.resize(self.ch_imgs[n], (x, y), interpolation=interpolation)
 
     def composite(self, path, name, form, bit: Bit.hint):
+        if min(self.res_x, self.res_y) <= 0:
+            return None
         if self.count == 1:
             c_img = singleChannelImage(self.res_x, self.res_y, 1, dtype=Bit.F32)
             for n in range(4):
@@ -70,20 +72,64 @@ class Recompositer:
                 if self.ch_imgs[n] is not None:
                     c_img[:, :, n] = self.ch_imgs[n]
 
-        convert = None
+        convert_function = chooseConvertFunction(bit, form, self.count)
 
-        if bit == Bit.U8:
-            c_img = convertToU8(c_img)
-        elif bit == Bit.U16:
-            c_img = convertToU16(c_img)
-        elif bit == Bit.F32:
-            c_img = convertToF32(c_img)
+        c_img = convert_function(c_img)
 
-        if min(self.res_x, self.res_y) <= 0:
-            return None
-        if path + name == "":
+        if name == "":
             name = "no_title"
-        imwrite(path+name+form, c_img)
+        makeDir(path)
+        imwrite(os.path.join(path, name+"."+form), c_img)
+
+
+def makeDir(path):
+    if not os.path.exists(path):
+        try:
+            os.makedirs(path)
+        except Exception as e:
+            print(e)
+
+
+def chooseConvertFunction(bit: Bit.hint, form: str, ch_count: int):
+    func = None
+    format_dic = {Bit.U8: {"jpg", "png", "webp", "tiff", "tga"}, Bit.U16: {"tiff"},
+                  Bit.U16_1: {"png", "tiff"},  Bit.F32: {"tiff"}}
+    if ch_count == 1 and bit == Bit.U16:
+        bit = Bit.U16_1
+
+    if form in format_dic[bit]:
+        if bit == Bit.U8:
+            func = convertToU8
+        elif bit == Bit.U16 or bit == Bit.U16_1:
+            func = convertToU16
+        elif bit == Bit.F32:
+            func = convertToF32
+    else:
+        if ch_count == 1 and bit == Bit.F32:
+            func = chooseConvertFunction(Bit.U16_1, form, ch_count)
+        else:
+            func = chooseConvertFunction(Bit.U8, form, ch_count)
+
+    return func
+
+
+def convertJsonStringToBit(st: str):
+    if st == "8":
+        return Bit.U8
+    elif st == "16":
+        return Bit.U16
+    elif st == "32":
+        return Bit.F32
+    else:
+        raise ValueError(f"no this bit method: {st}")
+
+
+def convertJsonStringToInterp(st: str):
+    convert_dic = {"linear": cv2.INTER_LINEAR, "cubic": cv2.INTER_CUBIC, "lanczos4": cv2.INTER_LANCZOS4, "nearest": cv2.INTER_NEAREST}
+    if st in convert_dic:
+        return convert_dic[st]
+    else:
+        raise ValueError(f"no this interpolation: {st}")
 
 
 def getImageByIndex(index, images=None) -> IndexedImage:

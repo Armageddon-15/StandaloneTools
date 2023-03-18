@@ -130,6 +130,15 @@ class ImageFormat(BaseSetting):
         self.format = SettingValue("png")
         self.interpolation = SettingValue("nearest")
         self.bit = SettingValue("8")
+        self.export_dir = SettingValue("")
+        self.destroy_when_done = SettingValue(True)
+
+    def __str__(self):
+        st = f"res:[{self.res_x.getValue(), self.res_y.getValue()}]\n" \
+             f"format: {self.format.getValue()}\n" \
+             f"bit: {self.bit.getValue()}\n" \
+             f"interp: {self.interpolation.getValue()}"
+        return st
 
 
 # window

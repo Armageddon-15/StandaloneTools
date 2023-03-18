@@ -3,28 +3,28 @@ from PyQt6.QtWidgets import QSizePolicy, QSpinBox, QAbstractSpinBox, QApplicatio
 from PyQt6.QtGui import QFont, QIcon, QImage, QPixmap, QDrag, QPalette, QColor
 from PyQt6.QtCore import Qt, QSize, QRect, QThread, QPoint, QMimeData, QByteArray
 from PyQt6 import QtCore
-from ScrollAreaWithStepSettings import ScrollAreaWithStepSettings
-from image_utils import *
+
+from QtUtil import *
 from CR_enum import *
 from Drag_and_Drop_Overlay import DnDWidget
 
-import sys
 import Recomp
-import GUI_Settings
+import GUISettings
 
 
 class ChannelViewer(QLabel):
-    def __init__(self, parent=None, image_viewer=None, ch=Channel.hint, size=GUI_Settings.half_picture_size, is_getter=False):
+    def __init__(self, parent=None, image_viewer=None, ch=Channel.hint, size=GUISettings.detail_setting.half_picture_size, is_getter=False):
         super(ChannelViewer, self).__init__(parent)
         self.is_getter = is_getter
         self.getter_index = 0
         self.getter_ch = Channel.hint
+        self.setStyleSheet("background-color:rgba(0,0,0,50)")
 
         if is_getter:
             self.setAcceptDrops(True)
         # self.setScaledContents(True)
         self.setFixedSize(size, size)
-        font = QFont("Microsoft JhengHei", GUI_Settings.font_size-2, 0, False)
+        font = QFont("Microsoft JhengHei", GUISettings.detail_setting.font_size-2, 0, False)
         font.setBold(True)
         self.setFont(font)
         self.setAlignment(Qt.AlignmentFlag.AlignCenter)
@@ -39,7 +39,7 @@ class ChannelViewer(QLabel):
         self.channel_sign.setMinimumSize(0, 0)
         self.channel_sign.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
-        font.setPointSize(GUI_Settings.half_font_size)
+        font.setPointSize(GUISettings.detail_setting.half_font_size)
 
         self.name_sign = QLabel(self)
         self.name_sign.setSizePolicy(size_po)
@@ -50,6 +50,7 @@ class ChannelViewer(QLabel):
 
         size_po.setVerticalStretch(1)
         self.frame = QFrame(self)
+        self.frame.setStyleSheet("background-color:rgba(0,0,0,0)")
         self.frame.setSizePolicy(size_po)
 
         self.vbox = QVBoxLayout(self)
@@ -81,8 +82,9 @@ class ChannelViewer(QLabel):
 
     def setImageFromMaster(self):
         iimg = Recomp.getImageByIndex(self.main.index)
-        self.setImage(iimg.image.getSingleChannel(self.ch))
-        self.setLabelName(self.master)
+        if iimg is not None:
+            self.setImage(iimg.image.getSingleChannel(self.ch))
+            self.setLabelName(self.master)
 
     def setImage(self, img_data: np.ndarray):
         if img_data is not None:
@@ -167,6 +169,17 @@ class ChannelViewer(QLabel):
                 self.setNameColor(Channel.hint)
                 self.refreshImageView()
 
+    def updateGui(self):
+        self.setFixedSize(GUISettings.detail_setting.half_picture_size, GUISettings.detail_setting.half_picture_size)
+        font = QFont("Microsoft JhengHei", GUISettings.detail_setting.font_size-2, 0, False)
+        font.setBold(True)
+        self.setFont(font)
+        self.channel_sign.setFont(font)
+        font.setPointSize(GUISettings.detail_setting.half_font_size)
+        self.name_sign.setFont(font)
+        if not self.pixmap().isNull():
+            self.setImageFromMaster()
+
     def rematch(self):
         pass
 
@@ -205,12 +218,13 @@ class ChannelViewer(QLabel):
 
 
 class ImageViewer(QLabel):
-    def __init__(self, parent, size=GUI_Settings.picture_size, is_getter=False):
+    def __init__(self, parent, size=GUISettings.detail_setting.picture_size, is_getter=False):
         super(ImageViewer, self).__init__(parent)
         self.main = parent
         self.is_getter = is_getter
         self.setFixedSize(size, size)
         self.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.setStyleSheet("background-color:rgba(0,0,0,50)")
 
         self.ch_viewers = [ChannelViewer()] * 4
         # self.ch_viewers.clear()
@@ -227,7 +241,7 @@ class ImageViewer(QLabel):
         else:
             self.name_label.setStyleSheet("color: rgba(40, 40, 40, 200);background-color: rgba(255, 255, 255, 150);border-radius: 0px")
 
-        font = QFont("Microsoft JhengHei", GUI_Settings.font_size, 0, False)
+        font = QFont("Microsoft JhengHei", GUISettings.detail_setting.font_size, 0, False)
         font.setBold(True)
         self.name_label.setFont(font)
         self.name_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
@@ -236,6 +250,7 @@ class ImageViewer(QLabel):
 
         size_po.setVerticalStretch(1)
         self.frame = QFrame(self)
+        self.frame.setStyleSheet("background-color:rgba(0,0,0,0)")
         self.frame.setSizePolicy(size_po)
 
         self.vbox = QVBoxLayout(self)
@@ -309,41 +324,13 @@ class ImageViewer(QLabel):
         return Recomp.getImageByIndex(self.main.index).image.getSingleChannel(ch)
 
     def deleteSelf(self):
-
         self.deleteLater()
 
-
-def imageToPixmap(img: np.ndarray) -> QPixmap:
-    """
-    :param img: only grayscale, rgb, rgba
-    :return: QPixmap type
-    """
-    # print(img.shape)
-    if len(img.shape) < 3:
-        img = cv2.cvtColor(img, cv2.COLOR_GRAY2RGBA)
-    elif len(img.shape) == 3:
-        img = cv2.cvtColor(img, cv2.COLOR_RGB2RGBA)
-    img = convertToU8(img)
-    h, w, c = img.shape
-    qimg = QImage(img.data.tobytes(), w, h, c*w, QImage.Format.Format_RGBA8888)
-
-    pixmap = QPixmap.fromImage(qimg)
-    return pixmap
-
-
-def pixmapWithAlpha(pixmap: QPixmap):
-    pixmap = pixmap.scaled(100, 100, Qt.AspectRatioMode.KeepAspectRatio)
-    qimg = pixmap.toImage()
-    qimg.convertToFormat(QImage.Format.Format_RGBA8888)
-    ptr = qimg.bits()
-    ptr.setsize(qimg.width() * qimg.height() * 4)
-    array = np.array(ptr).reshape(qimg.height(), qimg.width(), 4)
-    array = array[:, :, [2, 1, 0, 3]]
-    # breakpoint()
-    array = np.uint8(np.float32(array) * 0.7)
-    new_qimg = QImage(array.tobytes(), qimg.width(), qimg.height(), QImage.Format.Format_RGBA8888)
-    new_pix = QPixmap.fromImage(new_qimg)
-    return new_pix
-
-
-
+    def updateGui(self, img):
+        print(self, "update")
+        self.setFixedSize(GUISettings.detail_setting.picture_size, GUISettings.detail_setting.picture_size)
+        font = QFont("Microsoft JhengHei", GUISettings.detail_setting.font_size, 0, False)
+        font.setBold(True)
+        if img is not None:
+            self.setImage(img)
+        self.name_label.setFont(font)

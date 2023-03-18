@@ -1,22 +1,24 @@
 {
     "window": {
         "use_this": false,
-        "x": 0,
-        "y": 0,
-        "width": 1000,
-        "height": 800
+        "x": 2161,
+        "y": 1075,
+        "width": 1040,
+        "height": 446
     },
     "detail": {
         "picture_size": 300,
         "half_picture_size": 145,
-        "font_size": 15,
-        "half_font_size": 8
+        "font_size": 9,
+        "half_font_size": 7
     },
     "image": {
-        "res_x": 1,
+        "res_x": 0,
         "res_y": 0,
-        "format": "tif",
+        "format": "tga",
         "interpolation": "cubic",
-        "bit": "32"
+        "bit": "8",
+        "export_dir": "..",
+        "destroy_when_done": true
     }
 }

@@ -30,3 +30,20 @@ class DnDWidget(QLabel):
 
     def enterEvent(self, e) -> None:
         self.setGeometry(0, 0, 0, 0)
+
+
+class StretchedDnD(QLabel):
+    update = QtCore.pyqtSignal(QMimeData)
+
+    def __init__(self, parent):
+        super().__init__(parent)
+        self.data = None
+        self.setAcceptDrops(True)
+        self.setStyleSheet("color: rgba(0, 0, 0, 0); background-color: rgba(0, 0, 0, 0);")
+
+    def dragEnterEvent(self, e) -> None:
+        e.acceptProposedAction()
+
+    def dropEvent(self, e) -> None:
+        self.data = e.mimeData()
+        self.update.emit(self.data)

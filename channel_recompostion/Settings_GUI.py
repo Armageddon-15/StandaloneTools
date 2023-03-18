@@ -274,7 +274,7 @@ class PASettingClassFrame(QFrame):
 
 
 class PASettingFrame(QFrame):
-    def __init__(self, parent=None):
+    def __init__(self, parent=None, *args, **kwargs):
         super(PASettingFrame, self).__init__(parent)
         sizePolicy = QSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Minimum)
         sizePolicy.setHorizontalStretch(0)
@@ -292,6 +292,7 @@ class PASettingFrame(QFrame):
         self.vboxs = []
         self.hbox = QHBoxLayout(self)
         self.setSettings()
+        self.layoutSettings()
 
     def setSettings(self):
         res_setting_class = PASettingClassFrame(self, "Resolution Setting:")
@@ -303,31 +304,7 @@ class PASettingFrame(QFrame):
         detail_setting_class.addSettingFrame(PASpinBoxSetting(self, "Small Picture size", setting=GUISettings.detail_setting.half_picture_size))
         detail_setting_class.addSettingFrame(PASpinBoxSetting(self, "Title font size:", setting=GUISettings.detail_setting.font_size))
         detail_setting_class.addSettingFrame(PASpinBoxSetting(self, "Second Title font size", setting=GUISettings.detail_setting.half_font_size))
-
         self.setting_classes.append(detail_setting_class)
-
-        image_setting_class = PASettingClassFrame(self, "Image Settings")
-        image_setting_class.addSettingFrame(PASpinBoxSetting(self, "Resolution X", max_value=99999, setting=GUISettings.image_setting.res_x))
-        image_setting_class.addSettingFrame(PASpinBoxSetting(self, "Resolution Y", max_value=99999, setting=GUISettings.image_setting.res_y))
-
-        radio = PARadioButtonSetting(self, "Image Format", "png", 4, setting=GUISettings.image_setting.format)
-        radio.addRadioBoxes(["jpg", "tif", "tga"])
-        radio.updateValue()
-        image_setting_class.addSettingFrame(radio)
-
-        radio = PARadioButtonSetting(self, "Image Bit", "8", setting=GUISettings.image_setting.bit)
-        radio.addRadioBoxes(["16", "32"])
-        radio.updateValue()
-        image_setting_class.addSettingFrame(radio)
-
-        radio = PARadioButtonSetting(self, "Image Filter", "nearest", 3, setting=GUISettings.image_setting.interpolation)
-        radio.addRadioBoxes(["liner", "cubic"])
-        radio.updateValue()
-        image_setting_class.addSettingFrame(radio)
-
-        self.setting_classes.append(image_setting_class)
-
-        self.layoutSettings()
 
     def layoutSettings(self):
         i = 0
@@ -357,11 +334,54 @@ class PASettingFrame(QFrame):
             s_class.updateSettings()
 
 
+class ImageSettingFrame(PASettingFrame):
+    def __init__(self, parent=None, use_super=False, *args, **kwargs):
+        self.setting = GUISettings.image_setting
+        self.use_super = use_super
+        self.set = False
+        if self.use_super:
+            self.set = True
+        super(ImageSettingFrame, self).__init__(parent, *args, **kwargs)
+
+    def setSettingClass(self, image_setting: GUISettings.ImageFormat = GUISettings.image_setting):
+        self.setting = image_setting
+        self.set = True
+        self.setSettings()
+        self.layoutSettings()
+
+    def setSettings(self):
+        if self.use_super:
+            super().setSettings()
+
+        if self.set:
+            image_setting_class = PASettingClassFrame(self, "Image Settings")
+            image_setting_class.addSettingFrame(PACheckBoxSetting(self, "Remove panel when export finish", setting=self.setting.destroy_when_done))
+            image_setting_class.addSettingFrame(PASpinBoxSetting(self, "Resolution X", max_value=99999, setting=self.setting.res_x))
+            image_setting_class.addSettingFrame(PASpinBoxSetting(self, "Resolution Y", max_value=99999, setting=self.setting.res_y))
+            image_setting_class.addSettingFrame(PAFileSetting(self, "Export dir", setting=self.setting.export_dir))
+            radio = PARadioButtonSetting(self, "Image Format", "png", 4, setting=self.setting.format)
+            radio.addRadioBoxes(["jpg", "tiff", "tga", "webp"])
+            radio.updateValue()
+            image_setting_class.addSettingFrame(radio)
+            radio = PARadioButtonSetting(self, "Image Bit", "8", setting=self.setting.bit)
+            radio.addRadioBoxes(["16", "32"])
+            radio.updateValue()
+            image_setting_class.addSettingFrame(radio)
+            radio = PARadioButtonSetting(self, "Image Filter", "nearest", 3, setting=self.setting.interpolation)
+            radio.addRadioBoxes(["linear", "cubic", "lanczos4"])
+            radio.updateValue()
+            image_setting_class.addSettingFrame(radio)
+            self.setting_classes.append(image_setting_class)
+
+
 class PASettingWidget(QWidget):
-    def __init__(self, window=None):
+    def __init__(self, window=None, setting_frame=ImageSettingFrame, use_all_settings=True, title="Settings"):
         super(PASettingWidget, self).__init__()
+        self.setWindowTitle(title)
         self.main = window
-        self.setting_frame = PASettingFrame(self)
+        self.use_all = use_all_settings
+
+        self.setting_frame = setting_frame(self, use_all_settings)
         self.btn_frame = QFrame(self)
         sizePolicy = QSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Fixed)
         sizePolicy.setHorizontalStretch(0)
@@ -394,9 +414,14 @@ class PASettingWidget(QWidget):
         self.vbox.addWidget(self.setting_frame)
         self.vbox.addWidget(self.btn_frame)
 
+    def setImageSettingClass(self, setting_class: GUISettings.ImageFormat):
+        if type(self.setting_frame) is ImageSettingFrame:
+            self.setting_frame.setSettingClass(setting_class)
+
     def applyBtnClicked(self):
         self.setting_frame.applyAllSettings()
-        GUISettings.saveAndLoad()
+        if self.use_all:
+            GUISettings.saveAndLoad()
         self.setting_frame.updateAllSettings()
         if self.main is not None:
             self.main.runtimeUpdate()
@@ -411,7 +436,7 @@ class PASettingWidget(QWidget):
 
 def main():
     app = QApplication([])
-    window = PASettingWidget()
+    window = PASettingWidget(use_all_settings=False)
     window.show()
     sys.exit(app.exec())
 

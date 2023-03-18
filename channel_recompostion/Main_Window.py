@@ -1,28 +1,29 @@
-from PyQt6.QtWidgets import QLabel, QPushButton, QMenu, QWidget, QGridLayout, QVBoxLayout, QFrame, QHBoxLayout, QFileDialog
+from PyQt6.QtWidgets import QLabel, QPushButton, QMenu, QWidget, QGridLayout, QVBoxLayout, QFrame, QHBoxLayout, QToolBar, QMainWindow
 from PyQt6.QtWidgets import QSizePolicy, QSpinBox, QAbstractSpinBox, QApplication, QLineEdit, QComboBox, QScrollArea
-from PyQt6.QtGui import QFont, QIcon, QImage, QPixmap, QDrag, QPalette, QColor
+from PyQt6.QtGui import QFont, QIcon, QImage, QPixmap, QDrag, QPalette, QColor, QAction
 from PyQt6.QtCore import Qt, QSize, QRect, QThread, QPoint, QMimeData, QByteArray
 from PyQt6 import QtCore
 
-from image_utils import *
+from QtUtil import *
 from CR_enum import *
-from Drag_and_Drop_Overlay import DnDWidget
+from Drag_and_Drop_Overlay import DnDWidget, StretchedDnD
 from IO_Item import ImportImage, ExportImage
+from Settings_GUI import PASettingWidget
 
 import sys
 import Recomp
-import GUI_Settings
+import GUISettings
 
 
 class Window(QWidget):
-    def __init__(self):
-        super(Window, self).__init__()
-        self.setMinimumSize(int(GUI_Settings.picture_size*5), int(GUI_Settings.picture_size*2))
+    def __init__(self, parent=None):
+        super(Window, self).__init__(parent)
+        self.setMin()
 
-        self.importer_count = 1
-        self.exporter_count = 1
-        self.importers = [ImportImage(self, "", 1)]
-        self.exporters = [ExportImage(self)]
+        self.importer_count = 0
+        self.exporter_count = 0
+        self.importers = []
+        self.exporters = []
 
         self.import_scroll = QScrollArea(self)
         self.import_widget = QWidget(self.import_scroll)
@@ -38,10 +39,10 @@ class Window(QWidget):
         self.import_scroll_vbox.addWidget(self.import_widget)
         self.import_scroll.setWidget(self.import_widget)
 
-        size_po = QSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
+        size_po = QSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         size_po.setVerticalStretch(1)
 
-        self.import_stretch_frame = QFrame(self)
+        self.import_stretch_frame = StretchedDnD(self)
         self.import_stretch_frame.setSizePolicy(size_po)
 
         self.import_frame = QFrame(self)
@@ -90,6 +91,12 @@ class Window(QWidget):
         self.reLayoutImporters()
         self.reLayoutExporters()
 
+        self.import_stretch_frame.update.connect(self.getMimeData)
+
+    def setMin(self):
+        self.setMinimumSize(int(GUISettings.detail_setting.picture_size*2 + GUISettings.detail_setting.half_picture_size*4 + 200),
+                            int(max(GUISettings.detail_setting.picture_size, GUISettings.detail_setting.half_picture_size*2) + 200))
+
     def reLayoutImporters(self):
         for i in reversed(range(0, self.import_vbox.count())):
             self.import_vbox.removeWidget(self.import_vbox.itemAt(i).widget())
@@ -108,16 +115,22 @@ class Window(QWidget):
 
         self.export_vbox.addWidget(self.export_stretch_frame)
 
+    def addImportFromFilename(self, filename):
+        self.importer_count += 1
+        importer = ImportImage(self, filename, self.importer_count)
+        self.importers.append(importer)
+
+        self.import_vbox.removeWidget(self.import_vbox.itemAt(self.import_vbox.count() - 1).widget())
+        self.import_vbox.addWidget(importer)
+        self.import_vbox.addWidget(self.import_stretch_frame)
+
     def addImporter(self):
         filename = openReadOnlyFileDialog()
         if filename is not None:
-            self.importer_count += 1
-            importer = ImportImage(self, filename, self.importer_count)
-            self.importers.append(importer)
+            self.addImportFromFilename(filename)
 
-            self.import_vbox.removeWidget(self.import_vbox.itemAt(self.import_vbox.count()-1).widget())
-            self.import_vbox.addWidget(importer)
-            self.import_vbox.addWidget(self.import_stretch_frame)
+    def deleteImporter(self, obj):
+        self.importers.remove(obj)
 
     def addExporter(self):
         exporter = ExportImage(self)
@@ -126,6 +139,9 @@ class Window(QWidget):
         self.export_vbox.removeWidget(self.export_vbox.itemAt(self.export_vbox.count() - 1).widget())
         self.export_vbox.addWidget(exporter)
         self.export_vbox.addWidget(self.export_stretch_frame)
+
+    def deleteExporter(self, obj):
+        self.exporters.remove(obj)
 
     def findImageByIndex(self, index):
         for importer in self.importers:
@@ -141,19 +157,87 @@ class Window(QWidget):
         for exp in self.exporters:
             exp.refresh()
 
+    def updateGui(self):
+        self.setMin()
+        for im in self.importers:
+            im.updateGui()
+        for ex in self.exporters:
+            ex.updateGui()
 
-def openReadOnlyFileDialog():
-    dialog = QFileDialog()
-    dialog.setFileMode(QFileDialog.FileMode.ExistingFile)
-    dialog.setNameFilters(["All(*)", "Picture (*.jpg)", "Picture (*.png)", "Picture (*.tga)", "Picture (*.webp)"])
-    dialog.setDirectory(os.path.abspath("../"))
-    if dialog.exec():
-        file_path = dialog.selectedFiles()[0]
-        return file_path
+    def getMimeData(self, data: QMimeData):
+        file_path = data.text()
+        if file_path.find(r"file:///") != -1:
+            file_path = file_path.replace(r"file:///", "")
+            file_paths = file_path.split("\n")
+            try:
+                file_paths.remove("")
+            except ValueError:
+                pass
+            filename = file_paths[len(file_paths)-1]
+            if not os.path.isdir(filename):
+                if os.path.splitext(filename)[1] in {".png", ".jpg", ".tga", ".tiff", ".tif", ".webp"}:
+                    self.addImportFromFilename(filename)
+
+
+class MainWindow(QMainWindow):
+    def __init__(self):
+        super(MainWindow, self).__init__()
+        self.setWindowTitle("Channel Recompositor")
+        self.setWindowSize()
+        tool_bar = QToolBar(self)
+        tool_bar.setMovable(False)
+        self.addToolBar(tool_bar)
+
+        setting_button = QAction("Settings", self)
+        setting_button.triggered.connect(self.settingsClicked)
+        tool_bar.addAction(setting_button)
+
+        self.widget = Window(self)
+        self.setCentralWidget(self.widget)
+
+        self.setting_widget = PASettingWidget(self)
+
+    def setWindowSize(self):
+        if GUISettings.win_setting.use_this.getValue():
+            widget_width = GUISettings.win_setting.width.value
+            widget_height = GUISettings.win_setting.height.value
+            widget_x = GUISettings.win_setting.x.value
+            widget_y = GUISettings.win_setting.y.value
+            self.setGeometry(widget_x, widget_y, widget_width, widget_height)
+
+    def saveGeoPosition(self):
+        if GUISettings.win_setting.use_this.getValue():
+            geo = self.geometry()
+            GUISettings.win_setting.setGeo(geo.x(), geo.y(), geo.width(), geo.height())
+            GUISettings.saveAndLoad()
+
+    def settingsClicked(self):
+        self.setting_widget.setGeometry(self.x(), self.y(), self.setting_widget.sizeHint().width(), self.setting_widget.sizeHint().height())
+        self.setting_widget.show()
+
+    def runtimeUpdate(self):
+        self.saveGeoPosition()
+        self.widget.updateGui()
+
+    def close(self) -> bool:
+        print("s")
+        self.setting_widget.close()
+        super().close()
+        return True
+
+    def closeEvent(self, e) -> None:
+        self.saveGeoPosition()
+        super().closeEvent(e)
+
+    def resizeEvent(self, e) -> None:
+        self.saveGeoPosition()
+
+    def resize(self, a0: QtCore.QSize) -> None:
+        self.saveGeoPosition()
 
 
 if __name__ == '__main__':
     app = QApplication([])
-    window = Window()
+    window = MainWindow()
     window.show()
     sys.exit(app.exec())

@@ -4,14 +4,15 @@ from PyQt6.QtGui import QFont, QIcon, QImage, QPixmap, QDrag, QPalette, QColor
 from PyQt6.QtCore import Qt, QSize, QRect, QThread, QPoint, QMimeData, QByteArray
 from PyQt6 import QtCore
 
-from image_utils import *
+from QtUtil import *
 from CR_enum import *
 from Drag_and_Drop_Overlay import DnDWidget
 from viewer import ChannelViewer, ImageViewer
 
-import sys
+import copy
 import Recomp
-import GUI_Settings
+from Settings_GUI import PASettingWidget
+import GUISettings
 
 
 class ImportImage(QWidget):
@@ -34,12 +35,15 @@ class ImportImage(QWidget):
 
         self.ch_frame = QFrame(self)
         self.gbox = QGridLayout(self.ch_frame)
+        self.gbox.setSpacing(2)
+        self.gbox.setContentsMargins(0, 0, 0, 0)
         self.gbox.addWidget(ch_viewer_r, 0, 0)
         self.gbox.addWidget(ch_viewer_g, 0, 1)
         self.gbox.addWidget(ch_viewer_b, 1, 0)
         self.gbox.addWidget(ch_viewer_a, 1, 1)
 
         self.hbox = QHBoxLayout(self.viewer_frame)
+        self.hbox.setContentsMargins(0, 0, 0, 0)
         self.hbox.addWidget(self.image_viewer)
         self.hbox.addWidget(self.ch_frame)
 
@@ -61,6 +65,7 @@ class ImportImage(QWidget):
         self.vbox = QVBoxLayout(self)
         self.vbox.setContentsMargins(0, 0, 0, 0)
         self.vbox.setSpacing(0)
+        self.vbox.setAlignment(Qt.AlignmentFlag.AlignTop)
         self.vbox.addWidget(self.viewer_frame)
         self.vbox.addWidget(self.operate_frame)
 
@@ -95,8 +100,9 @@ class ImportImage(QWidget):
                 pass
             filename = file_paths[len(file_paths)-1]
             if not os.path.isdir(filename):
-                self.setImage(filename)
-                self.main.refreshConnectedViewer(self.index)
+                if os.path.splitext(filename)[1] in {".png", ".jpg", ".tga", ".tiff", ".tif", ".webp"}:
+                    self.setImage(filename)
+                    self.main.refreshConnectedViewer(self.index)
 
     def reimportClicked(self):
         filename = openReadOnlyFileDialog()
@@ -105,12 +111,22 @@ class ImportImage(QWidget):
 
     def deleteClicked(self):
         iimg = Recomp.getImageByIndex(self.index)
-        for link_ch_v in iimg.linkers:
-            link_ch_v.clearSelf(remove=False)
-        iimg.clearLinkers()
-        Recomp.removeImageByIndex(self.index)
+        if iimg is not None:
+            for link_ch_v in iimg.linkers:
+                link_ch_v.clearSelf(remove=False)
+            iimg.clearLinkers()
+            Recomp.removeImageByIndex(self.index)
         self.image_viewer.deleteSelf()
+        self.main.deleteImporter(self)
         self.deleteLater()
+
+    def updateGui(self):
+        img = None
+        if self.filepath != "":
+            img = Image().readImage(self.filepath)
+        self.image_viewer.updateGui(img)
+        for ch_v in self.chs:
+            ch_v.updateGui()
 
     def dragEnterEvent(self, e) -> None:
         self.dnd_check.setGeometry(0, 0, self.width(), self.height())
@@ -136,12 +152,15 @@ class ExportImage(QWidget):
 
         self.ch_frame = QFrame(self)
         self.gbox = QGridLayout(self.ch_frame)
+        self.gbox.setSpacing(2)
+        self.gbox.setContentsMargins(0, 0, 0, 0)
         self.gbox.addWidget(ch_viewer_r, 0, 0)
         self.gbox.addWidget(ch_viewer_g, 0, 1)
         self.gbox.addWidget(ch_viewer_b, 1, 0)
         self.gbox.addWidget(ch_viewer_a, 1, 1)
 
         self.hbox = QHBoxLayout(self.viewer_frame)
+        self.hbox.setContentsMargins(0, 0, 0, 0)
         self.hbox.addWidget(self.ch_frame)
         self.hbox.addWidget(self.image_viewer)
 
@@ -158,6 +177,7 @@ class ExportImage(QWidget):
         self.path_btn.setText("...")
 
         self.setting_btn = QPushButton(self)
+        self.setting_btn.clicked.connect(self.setBtnClicked)
         self.setting_btn.setText("Settings")
 
         self.exp_btn = QPushButton(self)
@@ -180,9 +200,16 @@ class ExportImage(QWidget):
         self.viewer_frame.setSizePolicy(size_po)
         self.vbox = QVBoxLayout(self)
         self.vbox.setSpacing(0)
+        self.vbox.setAlignment(Qt.AlignmentFlag.AlignTop)
         self.vbox.setContentsMargins(0, 0, 0, 0)
         self.vbox.addWidget(self.viewer_frame)
         self.vbox.addWidget(self.operate_frame)
+
+        self.exp_setting_widget = PASettingWidget(use_all_settings=False)
+        self.exp_settings = copy.deepcopy(GUISettings.image_setting)
+        self.path_line.setText(self.exp_settings.export_dir.getValue())
+        self.exp_settings.export_dir.setValue("it will not be used here")
+        self.exp_setting_widget.setImageSettingClass(self.exp_settings)
 
     def openWriteFileDialog(self):
         dialog = QFileDialog(self)
@@ -198,14 +225,20 @@ class ExportImage(QWidget):
         if filepath is not None:
             self.path_line.setText(filepath)
 
+    def setBtnClicked(self):
+        self.exp_setting_widget.show()
+
     def exportBtnClick(self):
         recomp = Recomp.Recompositer()
         for ch_v in self.image_viewer.ch_viewers:
             if ch_v.getter_ch != 0:
                 recomp.setChannelImage(Recomp.getImageByIndex(ch_v.getter_index).image.getSingleChannel(ch_v.getter_ch), ch_v.ch)
 
-        recomp.resize(0, 0, cv2.INTER_CUBIC)
-        recomp.composite(self.path_line.text(), self.image_viewer.name(), ".png", Bit.U16)
+        recomp.resize(0, 0, Recomp.convertJsonStringToInterp(self.exp_settings.interpolation.getValue()))
+        recomp.composite(self.path_line.text(), self.image_viewer.name(), self.exp_settings.format.getValue(),
+                         Recomp.convertJsonStringToBit(self.exp_settings.bit.getValue()))
+        if self.exp_settings.destroy_when_done.getValue():
+            self.deleteSelf()
 
     def refresh(self):
         self.image_viewer.checkedRefresh()
@@ -213,17 +246,15 @@ class ExportImage(QWidget):
     def deleteSelf(self):
         for ch_v in self.image_viewer.ch_viewers:
             ch_v.clearSelf()
-            self.deleteLater()
+        self.main.deleteExporter(self)
+
+        self.deleteLater()
+
+    def updateGui(self):
+        self.image_viewer.updateGui(None)
+        for ch_v in self.chs:
+            ch_v.updateGui()
 
     def resizeEvent(self, e) -> None:
         self.delete_btn.setGeometry(self.width()-30, 0, 30, 30)
 
-
-def openReadOnlyFileDialog():
-    dialog = QFileDialog()
-    dialog.setFileMode(QFileDialog.FileMode.ExistingFile)
-    dialog.setNameFilters(["All(*)", "Picture (*.jpg)", "Picture (*.png)", "Picture (*.tga)", "Picture (*.webp)"])
-    dialog.setDirectory(os.path.abspath("../"))
-    if dialog.exec():
-        file_path = dialog.selectedFiles()[0]
-        return file_path
