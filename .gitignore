@@ -6,6 +6,7 @@ dist/
 
 __pycache__/
 ref/
+freeimage/
 
 
 *.spec
