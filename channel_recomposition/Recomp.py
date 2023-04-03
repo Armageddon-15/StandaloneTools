@@ -3,7 +3,7 @@ import math
 
 
 import_images = {}
-export_images = []
+# export_images = []
 format_dic = {Bit.U8: {"jpg", "png", "webp", "tiff", "tga"}, Bit.U16: {"tiff"}, Bit.U16_1: {"png", "tiff"}, Bit.F32: {"tiff", "hdr"}}
 support_format_set = {".png", ".jpg", ".tga", ".tiff", ".tif", ".webp", ".hdr"}
 
@@ -89,9 +89,13 @@ class Recompositer:
         makeDir(path)
         try:
             imwrite(os.path.join(path, name+"."+form), c_img)
-        except TypeError:
+        except Exception as e:
             if form == "hdr":
-                raise TypeError("hdr image can only export in 3 channels")
+                raise WrongChannelCount("hdr image can only export in 3 channels\n"
+                                        "and filename and path should be english only\n"
+                                        "hdr只能导出三通道，且路径和文件名必须为英文")
+            else:
+                raise e
 
 
 def makeDir(path):

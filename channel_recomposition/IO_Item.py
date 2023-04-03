@@ -1,18 +1,17 @@
-from PyQt6.QtWidgets import QLabel, QPushButton, QMenu, QWidget, QGridLayout, QVBoxLayout, QFrame, QHBoxLayout, QDialog, QFileDialog
-from PyQt6.QtWidgets import QSizePolicy, QSpinBox, QAbstractSpinBox, QApplication, QLineEdit, QComboBox, QScrollArea
-from PyQt6.QtGui import QFont, QIcon, QImage, QPixmap, QDrag, QPalette, QColor
-from PyQt6.QtCore import Qt, QSize, QRect, QThread, QPoint, QMimeData, QByteArray
-from PyQt6 import QtCore
+from PyQt6.QtWidgets import QPushButton, QWidget, QGridLayout, QVBoxLayout, QFrame, QHBoxLayout, QDialog
+from PyQt6.QtWidgets import QSizePolicy, QLineEdit
+from PyQt6.QtCore import QRect, QMimeData
 
 from QtUtil import *
-from CR_enum import *
+from CR_Enum import *
 from Drag_and_Drop_Overlay import DnDWidget
 from viewer import ChannelViewer, ImageViewer
+from Settings_GUI import PASettingWidget
+from CustomDialog import CustomDialog
 
 import copy
 import Recomp
-from Settings_GUI import PASettingWidget
-import GUISettings
+import Settings_Classes
 
 
 class ImportImage(QWidget):
@@ -78,16 +77,26 @@ class ImportImage(QWidget):
 
     def setImage(self, path=""):
         if path != "":
-            img = Image().readImage(path)
-            self.image_viewer.setImage(img)
-            self.image_viewer.setFileName(path)
-            if self.index in Recomp.import_images:
-                Recomp.import_images[self.index].update(img, self.image_viewer.name())
+            try:
+                img = Image().readImage(path)
+            except FileShouldBeEnglishOnly as e:
+                dlg = CustomDialog()
+                dlg.setWindowTitle("Warning")
+                dlg.setText(e.reason)
+                if dlg.exec():
+                    print("Success!")
+                else:
+                    print("Cancel!")
             else:
-                Recomp.import_images.update({self.index: Recomp.IndexedImage(img, self.image_viewer.name(), self.index)})
+                self.image_viewer.setImage(img)
+                self.image_viewer.setFileName(path)
+                if self.index in Recomp.import_images:
+                    Recomp.import_images[self.index].update(img, self.image_viewer.name())
+                else:
+                    Recomp.import_images.update({self.index: Recomp.IndexedImage(img, self.image_viewer.name(), self.index)})
 
-            for chv in self.chs:
-                chv.setImageFromMaster()
+                for chv in self.chs:
+                    chv.setImageFromMaster()
 
     def getMimeData(self, data: QMimeData):
         file_path = data.text()
@@ -123,8 +132,18 @@ class ImportImage(QWidget):
     def updateGui(self):
         img = None
         if self.filepath != "":
-            img = Image().readImage(self.filepath)
-        self.image_viewer.updateGui(img)
+            try:
+                img = Image().readImage(self.filepath)
+            except FileShouldBeEnglishOnly as e:
+                dlg = CustomDialog(self)
+                dlg.setWindowTitle("Warning")
+                dlg.setText(e.reason)
+                if dlg.exec():
+                    print("Success!")
+                else:
+                    print("Cancel!")
+            else:
+                self.image_viewer.updateGui(img)
         for ch_v in self.chs:
             ch_v.updateGui()
 
@@ -206,7 +225,7 @@ class ExportImage(QWidget):
         self.vbox.addWidget(self.operate_frame)
 
         self.exp_setting_widget = PASettingWidget(use_all_settings=False)
-        self.exp_settings = copy.deepcopy(GUISettings.image_setting)
+        self.exp_settings = copy.deepcopy(Settings_Classes.image_setting)
         self.path_line.setText(self.exp_settings.export_dir.getValue())
         self.exp_settings.export_dir.setValue("it will not be used here")
         self.exp_setting_widget.setImageSettingClass(self.exp_settings)
@@ -238,12 +257,19 @@ class ExportImage(QWidget):
         try:
             recomp.composite(self.path_line.text(), self.image_viewer.name(), self.exp_settings.format.getValue(),
                              Recomp.convertJsonStringToBit(self.exp_settings.bit.getValue()))
-        except Exception as e:
-            dlg = QDialog(self)
-            dlg.setWindowTitle("HELLO!")
+        except WrongChannelCount as e:
+            dlg = CustomDialog(self)
+            dlg.setWindowTitle("Warning")
+            dlg.setText(e.reason)
             dlg.exec()
-        if self.exp_settings.destroy_when_done.getValue():
-            self.deleteSelf()
+        except Exception as e:
+            dlg = CustomDialog(self)
+            dlg.setWindowTitle("Warning")
+            dlg.setText(str(e))
+            dlg.exec()
+        else:
+            if self.exp_settings.destroy_when_done.getValue():
+                self.deleteSelf()
 
     def refresh(self):
         self.image_viewer.checkedRefresh()

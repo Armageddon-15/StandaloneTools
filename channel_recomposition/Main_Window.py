@@ -1,3 +1,13 @@
+"""
+Create By Armageddon15
+Contact Me:
+    github: https://github.com/Armageddon-15
+    bilibili: https://space.bilibili.com/34445745
+    email: hjc014@126.com
+           bbb.hjc014@gmail.com
+
+"""
+
 from PyQt6.QtWidgets import QPushButton, QWidget, QVBoxLayout, QFrame, QHBoxLayout, QToolBar, QMainWindow
 from PyQt6.QtWidgets import QSizePolicy, QApplication, QScrollArea
 from PyQt6.QtGui import QPalette, QColor, QAction
@@ -11,7 +21,7 @@ from Settings_GUI import PASettingWidget
 
 import sys
 import Recomp
-import GUISettings
+import Settings_Classes
 
 
 class Window(QWidget):
@@ -93,8 +103,8 @@ class Window(QWidget):
         self.import_stretch_frame.update.connect(self.getMimeData)
 
     def setMin(self):
-        self.setMinimumSize(int(GUISettings.detail_setting.picture_size*2 + GUISettings.detail_setting.half_picture_size*4 + 200),
-                            int(max(GUISettings.detail_setting.picture_size, GUISettings.detail_setting.half_picture_size*2) + 200))
+        self.setMinimumSize(int(Settings_Classes.detail_setting.picture_size*2 + Settings_Classes.detail_setting.half_picture_size*4 + 200),
+                            int(max(Settings_Classes.detail_setting.picture_size, Settings_Classes.detail_setting.half_picture_size*2) + 200))
 
     def reLayoutImporters(self):
         for i in reversed(range(0, self.import_vbox.count())):
@@ -198,18 +208,18 @@ class MainWindow(QMainWindow):
         self.setting_widget = PASettingWidget(self)
 
     def setWindowSize(self):
-        if GUISettings.win_setting.use_this.getValue():
-            widget_width = GUISettings.win_setting.width.value
-            widget_height = GUISettings.win_setting.height.value
-            widget_x = GUISettings.win_setting.x.value
-            widget_y = GUISettings.win_setting.y.value
+        if Settings_Classes.win_setting.use_this.getValue():
+            widget_width = Settings_Classes.win_setting.width.value
+            widget_height = Settings_Classes.win_setting.height.value
+            widget_x = Settings_Classes.win_setting.x.value
+            widget_y = Settings_Classes.win_setting.y.value
             self.setGeometry(widget_x, widget_y, widget_width, widget_height)
 
     def saveGeoPosition(self):
-        if GUISettings.win_setting.use_this.getValue():
+        if Settings_Classes.win_setting.use_this.getValue():
             geo = self.geometry()
-            GUISettings.win_setting.setGeo(geo.x(), geo.y(), geo.width(), geo.height())
-            GUISettings.saveAndLoad()
+            Settings_Classes.win_setting.setGeo(geo.x(), geo.y(), geo.width(), geo.height())
+            Settings_Classes.saveAndLoad()
 
     def settingsClicked(self):
         self.setting_widget.setGeometry(self.x(), self.y(), self.setting_widget.sizeHint().width(), self.setting_widget.sizeHint().height())

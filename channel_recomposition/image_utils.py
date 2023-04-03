@@ -7,7 +7,8 @@ import cv2
 import numpy as np
 import os
 
-from CR_enum import *
+from CR_Enum import *
+from CR_Error import *
 
 
 class Image:
@@ -24,7 +25,11 @@ class Image:
         self.channel_count = self.__getChannelCount()
 
     def readImage(self, path):
-        self.img = convertToF32(imread(path))
+        try:
+            self.img = convertToF32(imread(path))
+        except ValueError:
+            raise FileShouldBeEnglishOnly("filename and path should be english only\n"
+                                          "路径和文件名必须为英文")
         # print(self.img, self.img.dtype)
         self.channel_count = self.__getChannelCount()
         return self

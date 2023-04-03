@@ -3,12 +3,12 @@ from PyQt6.QtWidgets import QSizePolicy, QApplication, QLineEdit, QFileDialog, Q
 from PyQt6.QtCore import Qt
 
 import sys
-import GUISettings
+import Settings_Classes
 import os
 
 
 class SettingModify:
-    def __init__(self, setting: GUISettings.SettingValue = None, **kwargs):
+    def __init__(self, setting: Settings_Classes.SettingValue = None, **kwargs):
         self.is_setting_none = True
         if setting is not None:
             self.is_setting_none = False
@@ -29,7 +29,7 @@ class SettingModify:
 
 
 class PACheckBoxSetting(QFrame, SettingModify):
-    def __init__(self, parent=None, name="Check Box", check=False, setting: GUISettings.SettingValue = None):
+    def __init__(self, parent=None, name="Check Box", check=False, setting: Settings_Classes.SettingValue = None):
         super(PACheckBoxSetting, self).__init__(parent=parent, setting=setting)
         sizePolicy = QSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Fixed)
         sizePolicy.setHorizontalStretch(0)
@@ -60,7 +60,7 @@ class PACheckBoxSetting(QFrame, SettingModify):
 
 
 class PARadioButtonSetting(QFrame, SettingModify):
-    def __init__(self, parent=None, name="Radio Group", default_option="Default", column_per_row=4, setting: GUISettings.SettingValue = None):
+    def __init__(self, parent=None, name="Radio Group", default_option="Default", column_per_row=4, setting: Settings_Classes.SettingValue = None):
         super(PARadioButtonSetting, self).__init__(parent=parent, setting=setting)
         self.column_per_row = column_per_row
         self.name_label = QLabel(self)
@@ -136,7 +136,7 @@ class PARadioButtonSetting(QFrame, SettingModify):
 
 
 class PASpinBoxSetting(QFrame, SettingModify):
-    def __init__(self, parent=None, name="Spin Box", value=0, max_value=999, min_va=0, setting: GUISettings.SettingValue = None):
+    def __init__(self, parent=None, name="Spin Box", value=0, max_value=999, min_va=0, setting: Settings_Classes.SettingValue = None):
         super(PASpinBoxSetting, self).__init__(parent=parent, setting=setting)
         self.name_label = QLabel(self)
         self.name_label.setText(name)
@@ -183,7 +183,7 @@ class PASpinBoxSetting(QFrame, SettingModify):
 
 
 class PAFileSetting(QFrame, SettingModify):
-    def __init__(self, parent=None, name="path", setting: GUISettings.SettingValue = None):
+    def __init__(self, parent=None, name="path", setting: Settings_Classes.SettingValue = None):
         super(PAFileSetting, self).__init__(parent=parent, setting=setting)
         self.name_label = QLabel(self)
         self.name_label.setText(name)
@@ -296,14 +296,14 @@ class PASettingFrame(QFrame):
 
     def setSettings(self):
         res_setting_class = PASettingClassFrame(self, "Resolution Setting:")
-        res_setting_class.addSettingFrame(PACheckBoxSetting(self, "Remember last closed size", setting=GUISettings.win_setting.use_this))
+        res_setting_class.addSettingFrame(PACheckBoxSetting(self, "Remember last closed size", setting=Settings_Classes.win_setting.use_this))
         self.setting_classes.append(res_setting_class)
 
         detail_setting_class = PASettingClassFrame(self, "Detail Settings:")
-        detail_setting_class.addSettingFrame(PASpinBoxSetting(self, "Big Picture size", setting=GUISettings.detail_setting.picture_size))
-        detail_setting_class.addSettingFrame(PASpinBoxSetting(self, "Small Picture size", setting=GUISettings.detail_setting.half_picture_size))
-        detail_setting_class.addSettingFrame(PASpinBoxSetting(self, "Title font size:", setting=GUISettings.detail_setting.font_size))
-        detail_setting_class.addSettingFrame(PASpinBoxSetting(self, "Second Title font size", setting=GUISettings.detail_setting.half_font_size))
+        detail_setting_class.addSettingFrame(PASpinBoxSetting(self, "Big Picture size", setting=Settings_Classes.detail_setting.picture_size))
+        detail_setting_class.addSettingFrame(PASpinBoxSetting(self, "Small Picture size", setting=Settings_Classes.detail_setting.half_picture_size))
+        detail_setting_class.addSettingFrame(PASpinBoxSetting(self, "Title font size:", setting=Settings_Classes.detail_setting.font_size))
+        detail_setting_class.addSettingFrame(PASpinBoxSetting(self, "Second Title font size", setting=Settings_Classes.detail_setting.half_font_size))
         self.setting_classes.append(detail_setting_class)
 
     def layoutSettings(self):
@@ -336,14 +336,14 @@ class PASettingFrame(QFrame):
 
 class ImageSettingFrame(PASettingFrame):
     def __init__(self, parent=None, use_super=False, *args, **kwargs):
-        self.setting = GUISettings.image_setting
+        self.setting = Settings_Classes.image_setting
         self.use_super = use_super
         self.set = False
         if self.use_super:
             self.set = True
         super(ImageSettingFrame, self).__init__(parent, *args, **kwargs)
 
-    def setSettingClass(self, image_setting: GUISettings.ImageFormat = GUISettings.image_setting):
+    def setSettingClass(self, image_setting: Settings_Classes.ImageFormat = Settings_Classes.image_setting):
         self.setting = image_setting
         self.set = True
         self.setSettings()
@@ -414,14 +414,14 @@ class PASettingWidget(QWidget):
         self.vbox.addWidget(self.setting_frame)
         self.vbox.addWidget(self.btn_frame)
 
-    def setImageSettingClass(self, setting_class: GUISettings.ImageFormat):
+    def setImageSettingClass(self, setting_class: Settings_Classes.ImageFormat):
         if type(self.setting_frame) is ImageSettingFrame:
             self.setting_frame.setSettingClass(setting_class)
 
     def applyBtnClicked(self):
         self.setting_frame.applyAllSettings()
         if self.use_all:
-            GUISettings.saveAndLoad()
+            Settings_Classes.saveAndLoad()
         self.setting_frame.updateAllSettings()
         if self.main is not None:
             self.main.runtimeUpdate()

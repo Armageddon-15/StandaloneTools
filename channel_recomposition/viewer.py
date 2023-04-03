@@ -1,19 +1,19 @@
-from PyQt6.QtWidgets import QLabel, QPushButton, QMenu, QWidget, QGridLayout, QVBoxLayout, QFrame, QHBoxLayout, QFileDialog
-from PyQt6.QtWidgets import QSizePolicy, QSpinBox, QAbstractSpinBox, QApplication, QLineEdit, QComboBox, QScrollArea
-from PyQt6.QtGui import QFont, QIcon, QImage, QPixmap, QDrag, QPalette, QColor
-from PyQt6.QtCore import Qt, QSize, QRect, QThread, QPoint, QMimeData, QByteArray
+from PyQt6.QtWidgets import QLabel, QMenu, QVBoxLayout, QFrame
+from PyQt6.QtWidgets import QSizePolicy, QLineEdit
+from PyQt6.QtGui import QFont, QDrag
+from PyQt6.QtCore import QRect, QMimeData, QByteArray
 from PyQt6 import QtCore
 
 from QtUtil import *
-from CR_enum import *
+from CR_Enum import *
 from Drag_and_Drop_Overlay import DnDWidget
 
 import Recomp
-import GUISettings
+import Settings_Classes
 
 
 class ChannelViewer(QLabel):
-    def __init__(self, parent=None, image_viewer=None, ch=Channel.hint, size=GUISettings.detail_setting.half_picture_size, is_getter=False):
+    def __init__(self, parent=None, image_viewer=None, ch=Channel.hint, size=Settings_Classes.detail_setting.half_picture_size, is_getter=False):
         super(ChannelViewer, self).__init__(parent)
         self.is_getter = is_getter
         self.getter_index = 0
@@ -24,7 +24,7 @@ class ChannelViewer(QLabel):
             self.setAcceptDrops(True)
         # self.setScaledContents(True)
         self.setFixedSize(size, size)
-        font = QFont("Microsoft JhengHei", GUISettings.detail_setting.font_size-2, 0, False)
+        font = QFont("Microsoft JhengHei", Settings_Classes.detail_setting.font_size-2, 0, False)
         font.setBold(True)
         self.setFont(font)
         self.setAlignment(Qt.AlignmentFlag.AlignCenter)
@@ -39,7 +39,7 @@ class ChannelViewer(QLabel):
         self.channel_sign.setMinimumSize(0, 0)
         self.channel_sign.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
-        font.setPointSize(GUISettings.detail_setting.half_font_size)
+        font.setPointSize(Settings_Classes.detail_setting.half_font_size)
 
         self.name_sign = QLabel(self)
         self.name_sign.setSizePolicy(size_po)
@@ -170,12 +170,12 @@ class ChannelViewer(QLabel):
                 self.refreshImageView()
 
     def updateGui(self):
-        self.setFixedSize(GUISettings.detail_setting.half_picture_size, GUISettings.detail_setting.half_picture_size)
-        font = QFont("Microsoft JhengHei", GUISettings.detail_setting.font_size-2, 0, False)
+        self.setFixedSize(Settings_Classes.detail_setting.half_picture_size, Settings_Classes.detail_setting.half_picture_size)
+        font = QFont("Microsoft JhengHei", Settings_Classes.detail_setting.font_size-2, 0, False)
         font.setBold(True)
         self.setFont(font)
         self.channel_sign.setFont(font)
-        font.setPointSize(GUISettings.detail_setting.half_font_size)
+        font.setPointSize(Settings_Classes.detail_setting.half_font_size)
         self.name_sign.setFont(font)
         if not self.pixmap().isNull():
             self.setImageFromMaster()
@@ -218,7 +218,7 @@ class ChannelViewer(QLabel):
 
 
 class ImageViewer(QLabel):
-    def __init__(self, parent, size=GUISettings.detail_setting.picture_size, is_getter=False):
+    def __init__(self, parent, size=Settings_Classes.detail_setting.picture_size, is_getter=False):
         super(ImageViewer, self).__init__(parent)
         self.main = parent
         self.is_getter = is_getter
@@ -241,7 +241,7 @@ class ImageViewer(QLabel):
         else:
             self.name_label.setStyleSheet("color: rgba(40, 40, 40, 200);background-color: rgba(255, 255, 255, 150);border-radius: 0px")
 
-        font = QFont("Microsoft JhengHei", GUISettings.detail_setting.font_size, 0, False)
+        font = QFont("Microsoft JhengHei", Settings_Classes.detail_setting.font_size, 0, False)
         font.setBold(True)
         self.name_label.setFont(font)
         self.name_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
@@ -328,8 +328,8 @@ class ImageViewer(QLabel):
 
     def updateGui(self, img):
         print(self, "update")
-        self.setFixedSize(GUISettings.detail_setting.picture_size, GUISettings.detail_setting.picture_size)
-        font = QFont("Microsoft JhengHei", GUISettings.detail_setting.font_size, 0, False)
+        self.setFixedSize(Settings_Classes.detail_setting.picture_size, Settings_Classes.detail_setting.picture_size)
+        font = QFont("Microsoft JhengHei", Settings_Classes.detail_setting.font_size, 0, False)
         font.setBold(True)
         if img is not None:
             self.setImage(img)
