@@ -2,7 +2,6 @@
 settings for gui
 """
 import json
-from CR_enum import *
 
 
 class SettingValue:
@@ -163,13 +162,13 @@ def saveSettings():
               "detail": detail_setting.toJson(),
               "image": image_setting.toJson()}
 
-    with open("GUI_Setting.json", "w") as json_file:
+    with open("Setting.json", "w") as json_file:
         json.dump(a_dict, json_file, indent=4)
 
 
 def readSettings():
     global detail_setting, win_setting, image_setting, a_dict
-    with open("GUI_Setting.json", "r") as json_file:
+    with open("Setting.json", "r") as json_file:
         a_dict = json.load(json_file)
         for setting_class in a_dict.keys():
             for setting in a_dict[setting_class].keys():
