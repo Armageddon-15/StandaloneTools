@@ -207,14 +207,14 @@ def cv_imread(file_path):
     :param file_path: image path
     :return: opencv image, also numpy array, will be a BGR(A) ordered array
     """
-    cv_img = cv2.imdecode(np.fromfile(file_path, dtype=np.uint8), -1)
+    cv_img = cv2.imdecode(np.fromfile(file_path), -1)
     return cv_img
 
 
-def imread(file_path):
+def imread(file_path: str):
     """
     :param file_path: image path
-    :return: opencv image, also numpy array, will be a BGR(A) ordered array
+    :return: numpy array, will be an RGB(A) ordered array
     """
     img = iio.imread(file_path)
     return img
@@ -237,15 +237,22 @@ def cv_imshow(img: np.ndarray, win_name="ww", wait_key=0):
 def rgbaImage(x, y, black_or_white=0, *args, **kwargs):
     if black_or_white == 0:
         return np.zeros((y, x, 4), *args, **kwargs)
-    elif black_or_white ==1:
+    elif black_or_white == 1:
         return np.full((y, x, 4), 255, *args, **kwargs)
 
 
-def singleChannelImage(x, y, black_or_white=0, dtype:Bit.hint=Bit.hint, *args, **kwargs):
+def rgbImage(x, y, black_or_white=0, *args, **kwargs):
+    if black_or_white == 0:
+        return np.zeros((y, x, 3), *args, **kwargs)
+    elif black_or_white == 1:
+        return np.full((y, x, 3), 255, *args, **kwargs)
+
+
+def singleChannelImage(x, y, black_or_white=0, data_type: Bit.hint = Bit.hint, *args, **kwargs):
     if black_or_white == 0:
         return np.zeros((y, x), *args, **kwargs)
     elif black_or_white == 1:
-        return np.full((y, x), getTypeMaximum(dtype), *args, **kwargs)
+        return np.full((y, x), getTypeMaximum(data_type), *args, **kwargs)
 
 
 def getTypeMaximum(dtype):
@@ -255,7 +262,6 @@ def getTypeMaximum(dtype):
         return 65535
     elif dtype == Bit.F32:
         return 1.0
-
 
 
 def convertToF32(img: np.ndarray) -> np.ndarray:

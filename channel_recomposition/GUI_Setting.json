@@ -1,10 +1,10 @@
 {
     "window": {
-        "use_this": false,
-        "x": 2161,
-        "y": 1075,
-        "width": 1040,
-        "height": 446
+        "use_this": true,
+        "x": 1600,
+        "y": 1117,
+        "width": 1380,
+        "height": 899
     },
     "detail": {
         "picture_size": 300,
@@ -16,8 +16,8 @@
         "res_x": 0,
         "res_y": 0,
         "format": "tga",
-        "interpolation": "cubic",
-        "bit": "8",
+        "interpolation": "linear",
+        "bit": "32",
         "export_dir": "..",
         "destroy_when_done": true
     }

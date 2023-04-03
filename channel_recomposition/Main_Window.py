@@ -1,12 +1,11 @@
-from PyQt6.QtWidgets import QLabel, QPushButton, QMenu, QWidget, QGridLayout, QVBoxLayout, QFrame, QHBoxLayout, QToolBar, QMainWindow
-from PyQt6.QtWidgets import QSizePolicy, QSpinBox, QAbstractSpinBox, QApplication, QLineEdit, QComboBox, QScrollArea
-from PyQt6.QtGui import QFont, QIcon, QImage, QPixmap, QDrag, QPalette, QColor, QAction
-from PyQt6.QtCore import Qt, QSize, QRect, QThread, QPoint, QMimeData, QByteArray
+from PyQt6.QtWidgets import QPushButton, QWidget, QVBoxLayout, QFrame, QHBoxLayout, QToolBar, QMainWindow
+from PyQt6.QtWidgets import QSizePolicy, QApplication, QScrollArea
+from PyQt6.QtGui import QPalette, QColor, QAction
+from PyQt6.QtCore import QMimeData
 from PyQt6 import QtCore
 
 from QtUtil import *
-from CR_enum import *
-from Drag_and_Drop_Overlay import DnDWidget, StretchedDnD
+from Drag_and_Drop_Overlay import StretchedDnD
 from IO_Item import ImportImage, ExportImage
 from Settings_GUI import PASettingWidget
 
@@ -173,10 +172,11 @@ class Window(QWidget):
                 file_paths.remove("")
             except ValueError:
                 pass
-            filename = file_paths[len(file_paths)-1]
-            if not os.path.isdir(filename):
-                if os.path.splitext(filename)[1] in {".png", ".jpg", ".tga", ".tiff", ".tif", ".webp"}:
-                    self.addImportFromFilename(filename)
+            # filename = file_paths[len(file_paths)-1]
+            for filename in file_paths:
+                if not os.path.isdir(filename):
+                    if os.path.splitext(filename)[1] in Recomp.support_format_set:
+                        self.addImportFromFilename(filename)
 
 
 class MainWindow(QMainWindow):

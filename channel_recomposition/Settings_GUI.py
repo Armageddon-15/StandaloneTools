@@ -78,7 +78,7 @@ class PARadioButtonSetting(QFrame, SettingModify):
         self.radio_frame = QFrame(self)
         # self.radio_frame.setStyleSheet("background-color: rgba(0,0,0,128)")
         self.radio_gbox = QGridLayout(self.radio_frame)
-        self.radio_gbox.setContentsMargins(0,0,0,0)
+        self.radio_gbox.setContentsMargins(0, 0, 0, 0)
         self.radio_gbox.setAlignment(Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignHCenter)
         self.radio_gbox.addWidget(self.radios[0], 0, 0)
 
@@ -98,12 +98,12 @@ class PARadioButtonSetting(QFrame, SettingModify):
         if cur_column >= self.column_per_row:
             cur_row += 1
             cur_column = 0
-        else:
-            cur_column += 1
+
         r = QRadioButton(self)
         r.setText(option_name)
         self.radios.append(r)
         self.radio_gbox.addWidget(r, cur_row, cur_column)
+        cur_column += 1
 
     def addRadioBoxes(self, optional_names: list):
         cur_row = len(self.radios) // self.column_per_row
@@ -112,12 +112,12 @@ class PARadioButtonSetting(QFrame, SettingModify):
             if cur_column >= self.column_per_row:
                 cur_row += 1
                 cur_column = 0
-            else:
-                cur_column += 1
+
             r = QRadioButton(self)
             r.setText(name)
             self.radios.append(r)
             self.radio_gbox.addWidget(r, cur_row, cur_column)
+            cur_column += 1
 
     def updateValue(self):
         if not self.is_setting_none:
@@ -359,8 +359,8 @@ class ImageSettingFrame(PASettingFrame):
             image_setting_class.addSettingFrame(PASpinBoxSetting(self, "Resolution X", max_value=99999, setting=self.setting.res_x))
             image_setting_class.addSettingFrame(PASpinBoxSetting(self, "Resolution Y", max_value=99999, setting=self.setting.res_y))
             image_setting_class.addSettingFrame(PAFileSetting(self, "Export dir", setting=self.setting.export_dir))
-            radio = PARadioButtonSetting(self, "Image Format", "png", 4, setting=self.setting.format)
-            radio.addRadioBoxes(["jpg", "tiff", "tga", "webp"])
+            radio = PARadioButtonSetting(self, "Image Format", "png", 3, setting=self.setting.format)
+            radio.addRadioBoxes(["jpg", "tiff", "tga", "webp", "hdr"])
             radio.updateValue()
             image_setting_class.addSettingFrame(radio)
             radio = PARadioButtonSetting(self, "Image Bit", "8", setting=self.setting.bit)
@@ -436,7 +436,7 @@ class PASettingWidget(QWidget):
 
 def main():
     app = QApplication([])
-    window = PASettingWidget(use_all_settings=False)
+    window = PASettingWidget(use_all_settings=True)
     window.show()
     sys.exit(app.exec())
 

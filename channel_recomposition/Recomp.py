@@ -4,6 +4,8 @@ import math
 
 import_images = {}
 export_images = []
+format_dic = {Bit.U8: {"jpg", "png", "webp", "tiff", "tga"}, Bit.U16: {"tiff"}, Bit.U16_1: {"png", "tiff"}, Bit.F32: {"tiff", "hdr"}}
+support_format_set = {".png", ".jpg", ".tga", ".tiff", ".tif", ".webp", ".hdr"}
 
 
 class IndexedImage:
@@ -43,11 +45,11 @@ class Recompositer:
     def resize(self, x, y, interpolation=cv2.INTER_LINEAR):
         if min(x, y) == 0:
             x = y = 0
-            for img in self.ch_imgs:
-                if img is not None:
-                    self.count += 1
-                    x = max(img.shape[1], x)
-                    y = max(img.shape[0], y)
+        for img in self.ch_imgs:
+            if img is not None:
+                self.count += 1
+                x = max(img.shape[1], x)
+                y = max(img.shape[0], y)
 
         self.res_x = x
         self.res_y = y
@@ -59,27 +61,37 @@ class Recompositer:
         if min(self.res_x, self.res_y) <= 0:
             return None
         if self.count == 1:
-            c_img = singleChannelImage(self.res_x, self.res_y, 1, dtype=Bit.F32)
+            c_img = singleChannelImage(self.res_x, self.res_y, 1, data_type=Bit.F32)
             for n in range(4):
                 if self.ch_imgs[n] is not None:
                     c_img = self.ch_imgs[n]
 
+        elif self.count == 3:
+            c_img = rgbImage(self.res_x, self.res_y, dtype=np.float32)
+
+            for n in range(3):
+                if self.ch_imgs[n] is not None:
+                    c_img[:, :, n] = self.ch_imgs[n]
+
         else:
             c_img = rgbaImage(self.res_x, self.res_y, dtype=np.float32)
-            c_img[:, :, 3] = singleChannelImage(self.res_x, self.res_y, 1, dtype=Bit.F32)
+            c_img[:, :, 3] = singleChannelImage(self.res_x, self.res_y, 1, data_type=Bit.F32)
 
             for n in range(4):
                 if self.ch_imgs[n] is not None:
                     c_img[:, :, n] = self.ch_imgs[n]
 
         convert_function = chooseConvertFunction(bit, form, self.count)
-
         c_img = convert_function(c_img)
 
         if name == "":
             name = "no_title"
         makeDir(path)
-        imwrite(os.path.join(path, name+"."+form), c_img)
+        try:
+            imwrite(os.path.join(path, name+"."+form), c_img)
+        except TypeError:
+            if form == "hdr":
+                raise TypeError("hdr image can only export in 3 channels")
 
 
 def makeDir(path):
@@ -92,8 +104,6 @@ def makeDir(path):
 
 def chooseConvertFunction(bit: Bit.hint, form: str, ch_count: int):
     func = None
-    format_dic = {Bit.U8: {"jpg", "png", "webp", "tiff", "tga"}, Bit.U16: {"tiff"},
-                  Bit.U16_1: {"png", "tiff"},  Bit.F32: {"tiff"}}
     if ch_count == 1 and bit == Bit.U16:
         bit = Bit.U16_1
 

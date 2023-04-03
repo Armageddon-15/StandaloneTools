@@ -1,4 +1,4 @@
-from PyQt6.QtWidgets import QLabel, QPushButton, QMenu, QWidget, QGridLayout, QVBoxLayout, QFrame, QHBoxLayout, QFileDialog
+from PyQt6.QtWidgets import QLabel, QPushButton, QMenu, QWidget, QGridLayout, QVBoxLayout, QFrame, QHBoxLayout, QDialog, QFileDialog
 from PyQt6.QtWidgets import QSizePolicy, QSpinBox, QAbstractSpinBox, QApplication, QLineEdit, QComboBox, QScrollArea
 from PyQt6.QtGui import QFont, QIcon, QImage, QPixmap, QDrag, QPalette, QColor
 from PyQt6.QtCore import Qt, QSize, QRect, QThread, QPoint, QMimeData, QByteArray
@@ -100,7 +100,7 @@ class ImportImage(QWidget):
                 pass
             filename = file_paths[len(file_paths)-1]
             if not os.path.isdir(filename):
-                if os.path.splitext(filename)[1] in {".png", ".jpg", ".tga", ".tiff", ".tif", ".webp"}:
+                if os.path.splitext(filename)[1] in Recomp.support_format_set:
                     self.setImage(filename)
                     self.main.refreshConnectedViewer(self.index)
 
@@ -234,9 +234,14 @@ class ExportImage(QWidget):
             if ch_v.getter_ch != 0:
                 recomp.setChannelImage(Recomp.getImageByIndex(ch_v.getter_index).image.getSingleChannel(ch_v.getter_ch), ch_v.ch)
 
-        recomp.resize(0, 0, Recomp.convertJsonStringToInterp(self.exp_settings.interpolation.getValue()))
-        recomp.composite(self.path_line.text(), self.image_viewer.name(), self.exp_settings.format.getValue(),
-                         Recomp.convertJsonStringToBit(self.exp_settings.bit.getValue()))
+        recomp.resize(self.exp_settings.res_x.getValue(), self.exp_settings.res_y.getValue(), Recomp.convertJsonStringToInterp(self.exp_settings.interpolation.getValue()))
+        try:
+            recomp.composite(self.path_line.text(), self.image_viewer.name(), self.exp_settings.format.getValue(),
+                             Recomp.convertJsonStringToBit(self.exp_settings.bit.getValue()))
+        except Exception as e:
+            dlg = QDialog(self)
+            dlg.setWindowTitle("HELLO!")
+            dlg.exec()
         if self.exp_settings.destroy_when_done.getValue():
             self.deleteSelf()
 
