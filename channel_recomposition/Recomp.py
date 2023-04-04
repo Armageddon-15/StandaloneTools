@@ -4,7 +4,7 @@ import math
 
 import_images = {}
 # export_images = []
-support_format_dict = {"jpg": [Bit.U8],
+support_format_dict = {  # "jpg": [Bit.U8],
                        "png": [Bit.U8, Bit.U16_1],
                        "webp": [Bit.U8],
                        "bmp": [Bit.U8],
