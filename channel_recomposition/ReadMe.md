@@ -10,4 +10,8 @@ https://www.bilibili.com/video/BV1FX4y1C7YD
 
 ## 常见问题
 
-正在收集中:P
+### 为什么那么大
+
+因为opencv和pyqt6很大
+
+### 其他问题正在收集中:P
