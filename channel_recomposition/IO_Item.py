@@ -109,7 +109,7 @@ class ImportImage(QWidget):
                 pass
             filename = file_paths[len(file_paths)-1]
             if not os.path.isdir(filename):
-                if os.path.splitext(filename)[1] in Recomp.support_format_set:
+                if os.path.splitext(filename)[1].replace(".", "") in Recomp.support_format_dict:
                     self.setImage(filename)
                     self.main.refreshConnectedViewer(self.index)
 

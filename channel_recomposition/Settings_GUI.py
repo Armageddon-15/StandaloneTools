@@ -2,6 +2,8 @@ from PyQt6.QtWidgets import QLabel, QPushButton, QWidget, QVBoxLayout, QHBoxLayo
 from PyQt6.QtWidgets import QSizePolicy, QApplication, QLineEdit, QFileDialog, QAbstractSpinBox, QRadioButton
 from PyQt6.QtCore import Qt
 
+from Recomp import support_format_dict
+
 import sys
 import Settings_Classes
 import os
@@ -359,8 +361,12 @@ class ImageSettingFrame(PASettingFrame):
             image_setting_class.addSettingFrame(PASpinBoxSetting(self, "Resolution X", max_value=99999, setting=self.setting.res_x))
             image_setting_class.addSettingFrame(PASpinBoxSetting(self, "Resolution Y", max_value=99999, setting=self.setting.res_y))
             image_setting_class.addSettingFrame(PAFileSetting(self, "Export dir", setting=self.setting.export_dir))
-            radio = PARadioButtonSetting(self, "Image Format", "png", 3, setting=self.setting.format)
-            radio.addRadioBoxes(["jpg", "tiff", "tga", "webp", "hdr"])
+            keys = []
+            for key in support_format_dict.keys():
+                keys.append(key)
+
+            radio = PARadioButtonSetting(self, "Image Format", keys[0], 3, setting=self.setting.format)
+            radio.addRadioBoxes(keys[1:])
             radio.updateValue()
             image_setting_class.addSettingFrame(radio)
             radio = PARadioButtonSetting(self, "Image Bit", "8", setting=self.setting.bit)

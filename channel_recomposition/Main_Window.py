@@ -7,7 +7,6 @@ Contact Me:
            bbb.hjc014@gmail.com
 
 """
-
 from PyQt6.QtWidgets import QPushButton, QWidget, QVBoxLayout, QFrame, QHBoxLayout, QToolBar, QMainWindow
 from PyQt6.QtWidgets import QSizePolicy, QApplication, QScrollArea
 from PyQt6.QtGui import QPalette, QColor, QAction
@@ -185,7 +184,7 @@ class Window(QWidget):
             # filename = file_paths[len(file_paths)-1]
             for filename in file_paths:
                 if not os.path.isdir(filename):
-                    if os.path.splitext(filename)[1] in Recomp.support_format_set:
+                    if os.path.splitext(filename)[1].replace(".", "") in Recomp.support_format_dict:
                         self.addImportFromFilename(filename)
 
 

@@ -239,7 +239,7 @@ class ImageViewer(QLabel):
             self.name_label.setTextInteractionFlags(Qt.TextInteractionFlag.TextBrowserInteraction)
             self.name_label.setStyleSheet("color: rgba(210, 210, 210, 200);background-color: rgba(0, 0, 0, 150);border-radius: 0px")
         else:
-            self.name_label.setStyleSheet("color: rgba(40, 40, 40, 200);background-color: rgba(255, 255, 255, 150);border-radius: 0px")
+            self.name_label.setStyleSheet("color: rgba(200, 200, 200, 240);background-color: rgba(0, 0, 0, 170);border-radius: 0px")
 
         font = QFont("Microsoft JhengHei", Settings_Classes.detail_setting.font_size, 0, False)
         font.setBold(True)

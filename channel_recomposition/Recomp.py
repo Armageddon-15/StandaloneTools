@@ -4,8 +4,14 @@ import math
 
 import_images = {}
 # export_images = []
-format_dic = {Bit.U8: {"jpg", "png", "webp", "tiff", "tga"}, Bit.U16: {"tiff"}, Bit.U16_1: {"png", "tiff"}, Bit.F32: {"tiff", "hdr"}}
-support_format_set = {".png", ".jpg", ".tga", ".tiff", ".tif", ".webp", ".hdr"}
+support_format_dict = {"jpg": [Bit.U8],
+                       "png": [Bit.U8, Bit.U16_1],
+                       "webp": [Bit.U8],
+                       "bmp": [Bit.U8],
+                       "tiff": [Bit.U8, Bit.U16, Bit.U16_1, Bit.F32],
+                       "tga": [Bit.U8],
+                       "hdr": [Bit.F32],
+                       "exr": [Bit.F32]}
 
 
 class IndexedImage:
@@ -66,7 +72,7 @@ class Recompositer:
                 if self.ch_imgs[n] is not None:
                     c_img = self.ch_imgs[n]
 
-        elif self.count == 3:
+        elif self.count <= 3:
             c_img = rgbImage(self.res_x, self.res_y, dtype=np.float32)
 
             for n in range(3):
@@ -87,15 +93,21 @@ class Recompositer:
         if name == "":
             name = "no_title"
         makeDir(path)
+
+        filename = os.path.join(path, name+"."+form)
+        image_data = f"file: {filename}\n" + f"image data: {c_img.shape, c_img.dtype, self.count, convert_function}"
+        print(image_data)
         try:
-            imwrite(os.path.join(path, name+"."+form), c_img)
+            imwrite(filename, c_img)
         except Exception as e:
             if form == "hdr":
                 raise WrongChannelCount("hdr image can only export in 3 channels\n"
                                         "and filename and path should be english only\n"
-                                        "hdr只能导出三通道，且路径和文件名必须为英文")
+                                        "hdr只能是三通道，路径和文件名必须为英文")
             else:
-                raise e
+                raise FileError(image_data + f"\n{e}")
+
+        print("Composite Successfully\n")
 
 
 def makeDir(path):
@@ -107,23 +119,31 @@ def makeDir(path):
 
 
 def chooseConvertFunction(bit: Bit.hint, form: str, ch_count: int):
-    func = None
     if ch_count == 1 and bit == Bit.U16:
         bit = Bit.U16_1
 
-    if form in format_dic[bit]:
-        if bit == Bit.U8:
-            func = convertToU8
-        elif bit == Bit.U16 or bit == Bit.U16_1:
-            func = convertToU16
-        elif bit == Bit.F32:
-            func = convertToF32
+    if bit in support_format_dict[form]:
+        func = bitFormatToFunc(bit)
     else:
-        if ch_count == 1 and bit == Bit.F32:
-            func = chooseConvertFunction(Bit.U16_1, form, ch_count)
+        if len(support_format_dict[form]) == 1:
+            func = bitFormatToFunc(support_format_dict[form][0])
         else:
-            func = chooseConvertFunction(Bit.U8, form, ch_count)
+            if bit <= Bit.U8:
+                return convertToU8
+            func = chooseConvertFunction(Bit(int(bit/2)), form, ch_count)
 
+    return func
+
+
+def bitFormatToFunc(bit: Bit.hint):
+    if bit == Bit.U8:
+        func = convertToU8
+    elif bit == Bit.U16 or bit == Bit.U16_1:
+        func = convertToU16
+    elif bit == Bit.F32:
+        func = convertToF32
+    else:
+        return None
     return func
 
 

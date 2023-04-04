@@ -1,15 +1,15 @@
 {
     "window": {
         "use_this": true,
-        "x": 1857,
-        "y": 912,
+        "x": 2006,
+        "y": 650,
         "width": 1380,
         "height": 899
     },
     "detail": {
         "picture_size": 300,
         "half_picture_size": 145,
-        "font_size": 9,
+        "font_size": 11,
         "half_font_size": 7
     },
     "image": {
