@@ -2,7 +2,7 @@ import os
 import shutil
 
 
-dest_dir = r".\dist\ChannelRecomposition"
+dest_dir = r".\dist\ChannelRecompositer"
 
 
 def deleteCache(d):
