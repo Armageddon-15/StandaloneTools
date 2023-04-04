@@ -11,11 +11,11 @@ class Channel(enum.IntFlag):
 
 
 class Bit(enum.IntFlag):
-    U8 = 0b001
-    U16 = 0b010
-    U16_1 = 0b011
-    F32 = 0b100
-    hint = 0
+    U8     = 0b0001
+    U16    = 0b0010
+    U16_1  = 0b0011
+    F32    = 0b1000
+    hint   = 0
 
 
 class Format(enum.IntFlag):
